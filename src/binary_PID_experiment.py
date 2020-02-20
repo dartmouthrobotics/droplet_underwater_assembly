@@ -8,6 +8,9 @@ from mavros_msgs.srv import ParamSet
 import datetime
 import mavros_msgs.msg
 import ar_track_alvar_msgs.msg
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot
 from mavros_msgs.srv import CommandBool
 import tf
@@ -18,13 +21,15 @@ CHANGE_PARAM_PROXY = rospy.ServiceProxy('/mavros/param/set', ParamSet)
 
 YAW_RC_CHANNEL = 3
 MARKER_ID = 1
+CUTOFF = 0.00
 
-on_pwm = abs(int(sys.argv[1]))
+pwm = abs(int(sys.argv[1]))
 publish_duration_seconds = float(sys.argv[2])
 
 next_yaw_pwm = 0
 
 angle_history = []
+pwm_history = []
 
 collecting_data = False
 
@@ -45,10 +50,11 @@ def set_motor_arming(is_armed):
 def plot_data():
     global angle_history, pwm_history
 
-    output_plot_prefix = "{}_pwm_binary_p_control"
-    matplotlib.pyplot.title("{} pwm binary P. {} seconds").format(pwm, float(publish_duration_seconds))
+    output_plot_prefix = "{pwm}_pwm_binary_p_control".format(pwm=pwm)
+    matplotlib.pyplot.title("{} pwm binary P. {} seconds".format(pwm, float(publish_duration_seconds)))
     matplotlib.pyplot.plot(angle_history, label="tag angle")
-    matplotlib.pyplot.plot(pwm_history, label="published pwm")
+
+    #matplotlib.pyplot.plot([i / pwm for i in pwm_history], label="published pwm")
     matplotlib.pyplot.legend()
     matplotlib.pyplot.savefig(output_plot_prefix + ".png")
 
@@ -70,19 +76,22 @@ def establish_ROS_control():
         rospy.loginfo("Service call failed")
 
 
-def ar_marker_callback(marker_message):
+def marker_callback(marker_message):
     global angle_history, next_yaw_pwm, pwm_history, collecting_data, pwm
 
     marker_found = False
     for marker in marker_message.markers:
         if marker.id == MARKER_ID:
             marker_found = True
-            marker_angle = math.atan2(marker.pose.position.y, marker.pose.position.x)
+            marker_angle = math.atan2(marker.pose.pose.position.y, marker.pose.pose.position.x)
 
-            if marker_angle > 0:
-                next_yaw_pwm = -1 * pwm
+            if abs(marker_angle) < CUTOFF:
+                next_yaw_pwm = 0
             else:
-                next_yaw_pwm = 1 * pwm
+                if marker_angle > 0:
+                    next_yaw_pwm = -1 * pwm
+                else:
+                    next_yaw_pwm = 1 * pwm
 
             if collecting_data:
                 pwm_history.append(next_yaw_pwm)
@@ -93,10 +102,10 @@ def ar_marker_callback(marker_message):
         next_yaw_pwm = 0
 
 
-def run_binary_P_control_experiment():
+def run_binary_P_control_experiment(rc_override_publisher):
     global collecting_data, next_yaw_pwm
 
-    publish_rate = rospy.Rate(15)
+    publish_rate = rospy.Rate(30)
     go_message = mavros_msgs.msg.OverrideRCIn()
     stop_message = mavros_msgs.msg.OverrideRCIn()
 
@@ -114,7 +123,7 @@ def run_binary_P_control_experiment():
     rc_override_publisher.publish(stop_message)
     rc_override_publisher.publish(stop_message)
 
-    set_motor_arming(False)
+    set_motor_arming(True)
     rc_override_publisher.publish(stop_message)
     rc_override_publisher.publish(stop_message)
 
@@ -146,7 +155,10 @@ def main():
     marker_subscriber = rospy.Subscriber("/bluerov_controller/ar_tag_detector", ar_track_alvar_msgs.msg.AlvarMarkers, marker_callback)
     rc_override_publisher = rospy.Publisher("/mavros/rc/override", mavros_msgs.msg.OverrideRCIn, queue_size=10)
 
-    run_binary_P_control_experiment()
+    print "Running binary PID control experiment with pwm {pwm} and time {time}".format(pwm=pwm, time=publish_duration_seconds)
+    run_binary_P_control_experiment(rc_override_publisher)
+
+    print "Plotting data"
     plot_data()
 
 
