@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="fake_image" default="two-tags-near.png"/>
+
+  <!-- Bluerov robot transforms -->
+  <include file="$(find bluerov)/launch/description.launch" />
+
+  <!-- Mavros -->
+  <!--<include file="$(find bluerov_bringup)/launch/apm.launch" />-->
+
+  <node pkg="nodelet" type="nodelet" name="bluerov_nodelet_manager" args="manager" output="screen" respawn="true">
+      <param name="num_worker_threads" value="3" />
+  </node>
+
+  <!--<include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
+    <arg name="nodelet_manager_name" value="bluerov_nodelet_manager"/> 
+    <arg name="config_file" value="$(find tag_noise_experiment)/param/flir_land_calibration_1440_1080.yaml"/>
+    <arg name="start_nodelet_manager" value="false"/>
+    <arg name="color" value="false"/>
+  </include>-->
+  <node pkg="nodelet" type="nodelet" name="fake_video_stream" output="screen" args="load tag_response_test/FakeVideoStreamNodelet bluerov_nodelet_manager">
+    <param name="publish_rate" type="int" value="30"/>
+    <param name="fake_video_image_path" type="string" value="$(find tag_response_test)/images/$(arg fake_image)"/>
+    <rosparam command="load" file="$(find tag_noise_experiment)/param/flir_land_calibration_720_540.yaml"/>
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="stag_ros" output="screen" args="load stag_ros/StagNodelet bluerov_nodelet_manager" respawn="true">
+    <param name="camera_image_topic" type="string" value="/fake_video_stream/fake_video_stream/image_raw" />
+    <param name="camera_info_topic" type="string" value= "/fake_video_stream/fake_video_stream/camera_info" />
+    <param name="tag_id_type" type="int" value="21" />
+    <param name="marker_frame_prefix" type="string" value="/ar_marker_" />
+    <param name="default_marker_size" type="double" value="0.166" />
+    <param name="output_frame_id"     type="string" value="/base_link" />
+    <param name="image_frame_id"      type="string" value="/cam_0_optical_frame" />
+    <param name="marker_message_topic" type="string" value="/bluerov_controller/ar_tag_detector" />
+    <param name="use_marker_bundles" type="bool" value="false" />
+    <rosparam command="load" param="marker_sizes_by_id" file="$(find tag_noise_experiment)/param/marker_sizes_by_id.yaml"/>
+  </node>
+
+  <node pkg="minimal_bluerov_control_experiment" output="screen" respawn="false" type="binary_PID_experiment.py" name="binary_PID_experiment_node"> 
+      <rosparam>
+        notes: "This is a bunch of notes!!"
+      </rosparam>
+  </node>
+</launch>

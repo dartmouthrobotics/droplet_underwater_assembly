@@ -11,7 +11,6 @@ from mavros_msgs.srv import ParamSet
 import datetime
 import mavros_msgs.msg
 import stag_ros.msg
-import sensor_msgs.msg
 import utils
 import rospkg
 import reporting
@@ -44,7 +43,7 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 TRACKED_MARKER_ID = 0
 GOAL_POSE_XYZRPY = [-1.0, 0, 0, 0, 0, 0.0]
 LATEST_MARKER_MESSAGE = None
-EXPERIMENT_DURATION_SECONDS = 8.0
+EXPERIMENT_DURATION_SECONDS = 5.0
 BINARY_PWM_VALUE = 50
 MARKER_MESSAGE_HISTORY = []
 POSITION_HISTORY = []
@@ -60,17 +59,24 @@ latest_imu_message = None
 
 class VehicleConfig:
     def __init__(self):
+        self.yaw_motors = [6]
+        self.yaw_directions = [1]
+
+        self.y_motors = [4, 7]
+        self.y_directions = [-1, 1]
+
+        self.x_motors = [1, 4]
+
         self.primitives = {
-            "+X":   [1500, 1430, 1500, 1500, 1530, 1500, 1430, 1430], # forward. This seems to be good enough!
-            "-X":   [1500, 1540, 1500, 1500, 1460, 1500, 1540, 1570], # backward. Okay enough for now!
+            "+X":   [1500, 1550, 1500, 1500, 1550, 1500, 1500, 1500], # forward
             "NULL": [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], # nothing
         }
 
-        for val in self.primitives.values():
+        for val in self.primitives.values:
             assert(len(val) == 8)
 
             for speed in val:
-                assert(speed >= 1300)
+                assert(speed >= 1400)
                 assert(speed <= 1600)
 
         assert(len(self.yaw_motors) == len(self.yaw_directions))
@@ -101,7 +107,7 @@ def get_next_rc_message(pose_error):
 
     rc_message = utils.construct_stop_rc_message()
 
-    primitive = "-X"
+    primitive = "+X"
 
     for (motor_number, motor_speed) in enumerate(VEHICLE_CONFIG.primitives[primitive]):
         rc_message.channels[motor_number] = motor_speed
@@ -117,6 +123,10 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
     publish_rate = rospy.Rate(40)
     stop_message = utils.construct_stop_rc_message()
 
+    if abs(BINARY_PWM_VALUE) > 100:
+        rospy.logerr("Too fast!!!!! PWM must be less than 60. You don't want to make a fountain in the lab do you?")
+        sys.exit(1)
+
     rc_override_publisher.publish(stop_message)
     rc_override_publisher.publish(stop_message)
 
@@ -127,6 +137,7 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
     rc_override_publisher.publish(stop_message)
 
     start_time = datetime.datetime.now()
+    rospy.loginfo("Running control loop with binary pwm {}...".format(BINARY_PWM_VALUE))
 
     while ((datetime.datetime.now() - start_time).total_seconds() < float(EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
         robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE, debug_pose_publisher)
@@ -204,7 +215,8 @@ def main():
     if DRY_RUN:
         rospy.loginfo("Running in test mode.")
 
-    rospy.loginfo("Running control test experiment for {time} seconds".format(
+    rospy.loginfo("Running binary PID control experiment with pwm {pwm} and time {time}".format(
+        pwm=BINARY_PWM_VALUE,
         time=EXPERIMENT_DURATION_SECONDS
     ))
 

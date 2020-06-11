@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title="Control Report">
+</head>
+
+<body>
+  <h1>
+    Control experiment {{ timestamp }}
+  </h1>
+  <h1>
+    Notes
+  </h1>
+  <hr>
+  <p>
+    {{ notes }}
+  </p>
+  <h1>
+    Stats
+  </h1>
+  <hr>
+  <h2>Experiment time: {{ data_collection_time }} seconds</h2>
+  <h2>
+  Overshoot by axis:
+  </h2>
+  {% for axis_name in axis_names %}
+  <p>
+  {{ axis_name }} : {{ overshoots[axis_name] }}
+  </p>
+  {% endfor %}
+  
+  <hr>
+  <h1>
+  Position vs goal plots
+  </h1>
+  {% for position_plot in position_plots %}
+    <p>
+    <img src="{{ position_plot }}" alt="{{ position_plot }}">
+    </p>
+  {% endfor %}
+  <h1>
+  Motor speed plots
+  </h1>
+  {% for motor_plot in motor_speed_plots %}
+    <p>
+    <img src="{{ motor_plot }}" alt="{{ motor_plot }}">
+    </p>
+  {% endfor %}
+  <hr>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="standalone" default="false" doc="if this is set to the string true, does not spawn a nodelet manager. Otherwise it does."/>
+
+  <group if="$(arg standalone)">
+      <node pkg="nodelet" type="nodelet" name="bluerov_nodelet_manager" args="manager" output="screen" respawn="true">
+          <param name="num_worker_threads" value="3" />
+      </node>
+  </group>
+
+  <node pkg="nodelet" type="nodelet" name="stag_ros" output="screen" args="load stag_ros/StagNodelet bluerov_nodelet_manager" respawn="true">
+    <param name="camera_image_topic" type="string" value="/camera_array/cam0/image_raw" />
+    <param name="camera_info_topic" type="string" value="/camera_array/cam0/camera_info" />
+    <param name="tag_id_type" type="int" value="21" />
+    <param name="marker_frame_prefix" type="string" value="/ar_marker_" />
+    <param name="default_marker_size" type="double" value="0.166" />
+    <param name="output_frame_id"     type="string" value="/base_link" />
+    <param name="image_frame_id"      type="string" value="/cam_0_optical_frame" />
+    <param name="marker_message_topic" type="string" value="/bluerov_controller/ar_tag_detector" />
+    <param name="use_marker_bundles" type="bool" value="true" />
+    <param name="publish_debug_images" type="bool" value="true" />
+    <rosparam command="load" file="$(find tag_noise_experiment)/param/bundle-four-stags-manual.json" />
+
+    <rosparam command="load" param="marker_sizes_by_id" file="$(find tag_noise_experiment)/param/marker_sizes_by_id.yaml" />
+  </node>
+</launch>
