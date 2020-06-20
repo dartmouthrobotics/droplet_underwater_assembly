@@ -191,7 +191,7 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
             elif current_action.action_type == 'close_gripper':
                 GRIPPER_HANDLER.start_closing()
 
-            print("Starting action: {}".format(current_action))
+            rospy.loginfo("Starting action: {}".format(current_action))
             current_action.start()
         else:
             if current_action.is_complete(pose_error):
