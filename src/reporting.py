@@ -107,7 +107,7 @@ def write_history_csv_files(output_directory, position_history, error_history, r
     write_str_to_file(imu_history_csv_str, imu_history_outfile)
 
 
-def report_results(vehicle_config, position_history, response_history, error_history, goal_position, notes, output_directory, data_collection_time, report_output, marker_history, imu_history):
+def report_results(position_history, response_history, error_history, goal_position, notes, output_directory, data_collection_time, report_output, marker_history, imu_history):
     overshoots = {}
 
     position_plots = []

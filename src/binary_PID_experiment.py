@@ -12,16 +12,17 @@ import datetime
 import mavros_msgs.msg
 import stag_ros.msg
 import sensor_msgs.msg
-import utils
 import rospkg
 import reporting
-
+import trajectory_tracker
 from mavros_msgs.srv import CommandBool
 import tf
-
 import geometry_msgs.msg
 import os
+import collections
 
+import utils
+import gripper_handler
 """
 Motor locations:
 
@@ -42,9 +43,9 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 
 
 TRACKED_MARKER_ID = 0
-GOAL_POSE_XYZRPY = [-1.0, 0, 0, 0, 0, 0.0]
+GOAL_POSE_XYZRPY = [-0.75, -0.1, 0, 0, 0, 0.0]
 LATEST_MARKER_MESSAGE = None
-EXPERIMENT_DURATION_SECONDS = 8.0
+EXPERIMENT_DURATION_SECONDS = 60.0
 BINARY_PWM_VALUE = 50
 MARKER_MESSAGE_HISTORY = []
 POSITION_HISTORY = []
@@ -53,31 +54,71 @@ ERROR_HISTORY = []
 IMU_HISTORY = []
 DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
+GRIPPER_HANDLER = gripper_handler.GripperHandler()
+
+OVER_BLOCK_1_POSE = [-0.73, -0.1, 0, 0, 0, 0]
+CENTER_BACK_POSE =  [-0.83, -0.1, 0, 0, 0, 0]
+POSE_TOLERANCE = [0.03, 0.03, float("inf"), float("inf"), float("inf"), 0.05]
 
 debug_pose_publisher = None
 latest_imu_message = None
 
+MOTION_PRIMITIVES = [
+    trajectory_tracker.MotionPrimitive("+X", [1500, 1445, 1500, 1500, 1545, 1500, 1430, 1430], None),
+    trajectory_tracker.MotionPrimitive("-X", [1500, 1545, 1500, 1500, 1445, 1500, 1500, 1500], None),
+    trajectory_tracker.MotionPrimitive("+Y", [1500, 1540, 1500, 1500, 1540, 1500, 1545, 1455], None),
+    trajectory_tracker.MotionPrimitive("-Y", [1500, 1455, 1500, 1500, 1455, 1500, 1455, 1540], None),
+    trajectory_tracker.MotionPrimitive("-Yaw", [1500, 1445, 1500, 1500, 1500, 1500, 1500, 1445], None),
+    trajectory_tracker.MotionPrimitive("+Yaw", [1500, 1525, 1500, 1500, 1500, 1500, 1500, 1525], None),
+    trajectory_tracker.MotionPrimitive("NULL", [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None),
+    trajectory_tracker.MotionPrimitive("ONE_MOTOR", [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1430], None),
+]
 
-class VehicleConfig:
-    def __init__(self):
-        self.primitives = {
-            "+X":   [1500, 1430, 1500, 1500, 1530, 1500, 1430, 1430], # forward. This seems to be good enough!
-            "-X":   [1500, 1540, 1500, 1500, 1460, 1500, 1540, 1570], # backward. Okay enough for now!
-            "NULL": [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], # nothing
-        }
+TRAJECTORY_TRACKER = trajectory_tracker.BinaryTrajectoryTracker(MOTION_PRIMITIVES)
+#TRAJECTORY_TRACKER = trajectory_tracker.SinglePrimitiveTracker(MOTION_PRIMITIVES)
+TRAJECTORY_TRACKER.set_goal_position(GOAL_POSE_XYZRPY)
 
-        for val in self.primitives.values():
-            assert(len(val) == 8)
+class AssemblyAction(object):
+    def __init__(self, action_type, goal_pose):
+        self.valid_types = ['move', 'open_gripper', 'close_gripper']
+        self.action_type = action_type
+        self.goal_pose = goal_pose
+        self.start_time = None
 
-            for speed in val:
-                assert(speed >= 1300)
-                assert(speed <= 1600)
+        assert(self.action_type in self.valid_types)
+        assert(len(self.goal_pose) == 6)
 
-        assert(len(self.yaw_motors) == len(self.yaw_directions))
-        assert(len(self.y_motors) == len(self.y_directions))
+    def start(self):
+        self.start_time = rospy.Time.now()
+
+    @property
+    def is_started(self):
+        return self.start_time is not None
+
+    def is_complete(self, pose_error):
+        if self.start_time is None:
+            rospy.logerr("Cannot complete an action that hasn't been started.")
+            return False
+
+        if self.action_type == 'move':
+            return all(
+                [abs(error) < tolerance for (error, tolerance) in zip(pose_error, POSE_TOLERANCE)]
+            )
+
+        if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
+            return (rospy.Time.now() - self.start_time).to_sec() > GRIPPER_HANDLER.toggle_time_seconds() + 1.0
+
+        raise Exception("Unrecognized action type!")
 
 
-VEHICLE_CONFIG = VehicleConfig()
+ACTIONS = [
+    AssemblyAction('move', OVER_BLOCK_1_POSE),
+    AssemblyAction('close_gripper', OVER_BLOCK_1_POSE),
+    AssemblyAction('move', CENTER_BACK_POSE),
+    AssemblyAction('move', OVER_BLOCK_1_POSE),
+    AssemblyAction('open_gripper', OVER_BLOCK_1_POSE),
+    AssemblyAction('move', CENTER_BACK_POSE),
+]
 
 
 def imu_callback(imu_message):
@@ -95,24 +136,8 @@ def marker_callback(marker_message):
             TIMES_TRACKED_MARKER_SEEN = TIMES_TRACKED_MARKER_SEEN + 1
 
 
-def get_next_rc_message(pose_error):
-    yaw_error = pose_error[5]
-    y_error = pose_error[1]
-
-    rc_message = utils.construct_stop_rc_message()
-
-    primitive = "-X"
-
-    for (motor_number, motor_speed) in enumerate(VEHICLE_CONFIG.primitives[primitive]):
-        rc_message.channels[motor_number] = motor_speed
-
-    return rc_message
-
-
-# first lets do a dry run. What does a dry run look like?
-# well first first I need to figure out the right motors
 def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher):
-    global POSITION_HISTORY, RESPONSE_HISTORY, ERROR_HISTORY, latest_imu_message, IMU_HISTORY
+    global POSITION_HISTORY, RESPONSE_HISTORY, ERROR_HISTORY, latest_imu_message, IMU_HISTORY, GOAL_POSE_XYZRPY
 
     publish_rate = rospy.Rate(40)
     stop_message = utils.construct_stop_rc_message()
@@ -128,21 +153,44 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
 
     start_time = datetime.datetime.now()
 
+    current_action = ACTIONS.pop(0)
+
     while ((datetime.datetime.now() - start_time).total_seconds() < float(EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
+        GOAL_POSE_XYZRPY = current_action.goal_pose
+        TRAJECTORY_TRACKER.set_goal_position(GOAL_POSE_XYZRPY)
+
         robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE, debug_pose_publisher)
         robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
 
-        pose_error = utils.get_error(robot_pose_xyzrpy, GOAL_POSE_XYZRPY)
+        TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
+        pose_error = TRAJECTORY_TRACKER.get_error()
 
-        go_message = get_next_rc_message(pose_error)
+        # act on the current action if it is not complete
+        if not current_action.is_started:
+            if current_action.action_type == 'open_gripper':
+                GRIPPER_HANDLER.start_opening()
+            elif current_action.action_type == 'close_gripper':
+                GRIPPER_HANDLER.start_closing()
 
+            current_action.start()
+        else:
+            if current_action.is_complete(pose_error):
+                rospy.loginfo("Completed action: {}".format(current_action.action_type))
+                current_action = ACTIONS.pop(0)
+
+        go_message = TRAJECTORY_TRACKER.get_next_motion_primitive().as_rc_override
+
+        GRIPPER_HANDLER.update()
+        GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
+
+        GOAL_POSE_HISTORY.append(GOAL_POSE_XYZRPY)
         POSITION_HISTORY.append(robot_pose_xyzrpy)
         RESPONSE_HISTORY.append(go_message)
         ERROR_HISTORY.append(pose_error)
         IMU_HISTORY.append(latest_imu_message)
 
-        if any([abs(1500 - channel) > 200 for channel in go_message.channels]):
-            rospy.loginfo("Too much pwm! Safety stopping on message: {}".format(go_message))
+        if any([abs(1500 - channel) > 150 for channel in go_message.channels]):
+            rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(go_message))
 
             if not DRY_RUN:
                 set_motor_arming(False)
@@ -151,6 +199,8 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
 
         rc_override_publisher.publish(go_message)
         publish_rate.sleep()
+
+    rospy.loginfo("Opening gripper after run")
 
     rospy.loginfo("Finished data collection")
     if not DRY_RUN:
@@ -232,7 +282,6 @@ def main():
 
     rospy.loginfo("Outputting report to {}".format(report_output))
     report = reporting.report_results(
-        vehicle_config=VEHICLE_CONFIG,
         position_history=POSITION_HISTORY,
         response_history=RESPONSE_HISTORY,
         error_history=ERROR_HISTORY,
