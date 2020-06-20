@@ -5,6 +5,7 @@ import subprocess
 import datetime
 import os
 import rospkg
+import numpy
 
 
 POSITION_AXIS_LABELS = ["X", "Y", "Z", "Roll", "Pitch", "Yaw"]
@@ -107,7 +108,7 @@ def write_history_csv_files(output_directory, position_history, error_history, r
     write_str_to_file(imu_history_csv_str, imu_history_outfile)
 
 
-def report_results(position_history, response_history, error_history, goal_position, notes, output_directory, data_collection_time, report_output, marker_history, imu_history):
+def report_results(position_history, response_history, error_history, goal_pose_history, notes, output_directory, data_collection_time, report_output, marker_history, imu_history):
     overshoots = {}
 
     position_plots = []
@@ -116,15 +117,20 @@ def report_results(position_history, response_history, error_history, goal_posit
     for (axis_index, axis_name) in enumerate(POSITION_AXIS_LABELS):
         fig, ax = pyplot.subplots()
 
-        axis_goal = goal_position[axis_index]
+        axis_goals = [goal[axis_index] for goal in goal_pose_history]
         axis_positions = [position[axis_index] for position in position_history]
         axis_errors = [error[axis_index] for error in error_history]
 
         ax.plot(axis_positions, label=axis_name)
-        ax.axhline(y=goal_position[axis_index], color="r", label="goal ({0:.3f})".format(axis_goal))
+        ax.plot(axis_goals, color="r", label="goal")
+
+        y_min, y_max = ax.get_ylim()
+        # set y axis lines to be 1cm apart
+        ax.yaxis.set_ticks(numpy.arange(y_min, y_max, 0.01))
 
         ax.set_title("{} position".format(axis_name))
         ax.legend()
+        ax.grid()
 
         pos_plot_output = "{output_directory}/{axis_name}_position_v_goal.svg".format(axis_name=axis_name, output_directory=output_directory)
         fig.savefig(pos_plot_output)

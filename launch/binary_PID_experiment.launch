@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="notes" default="No notes provided."/>
+  <arg name="dry_run" default="false"/>
   <!-- Bluerov robot transforms -->
   <include file="$(find bluerov)/launch/description.launch" />
 
@@ -21,9 +23,9 @@
   </include>
 
   <node pkg="minimal_bluerov_control_experiment" output="screen" respawn="false" type="binary_PID_experiment.py" name="binary_PID_experiment_node" required="true"> 
-    <param name="dry_run" type="bool" value="false"/>
+    <param name="dry_run" type="bool" value="$(arg dry_run)"/>
     <rosparam>
-      notes: "Single motor testing"
+      notes: $(arg notes)
     </rosparam>
   </node>
 

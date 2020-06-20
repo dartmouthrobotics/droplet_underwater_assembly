@@ -45,13 +45,14 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 TRACKED_MARKER_ID = 0
 GOAL_POSE_XYZRPY = [-0.75, -0.1, 0, 0, 0, 0.0]
 LATEST_MARKER_MESSAGE = None
-EXPERIMENT_DURATION_SECONDS = 60.0
+EXPERIMENT_DURATION_SECONDS = 100.0
 BINARY_PWM_VALUE = 50
 MARKER_MESSAGE_HISTORY = []
 POSITION_HISTORY = []
 RESPONSE_HISTORY = []
 ERROR_HISTORY = []
 IMU_HISTORY = []
+GOAL_POSE_HISTORY = []
 DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
@@ -84,9 +85,19 @@ class AssemblyAction(object):
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
+        self.reached_goal_time = None
+        self.position_hold_time = 6.0
+        self.gripper_hold_time = 2.0
 
         assert(self.action_type in self.valid_types)
         assert(len(self.goal_pose) == 6)
+
+    def __str__(self):
+        if self.action_type == "open_gripper" or self.action_type == "close_gripper":
+
+            return "Action type: {}".format(self.action_type)
+
+        return "Move to: {}".format(self.goal_pose)
 
     def start(self):
         self.start_time = rospy.Time.now()
@@ -101,12 +112,18 @@ class AssemblyAction(object):
             return False
 
         if self.action_type == 'move':
-            return all(
-                [abs(error) < tolerance for (error, tolerance) in zip(pose_error, POSE_TOLERANCE)]
-            )
+            if self.reached_goal_time is None:
+                reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, POSE_TOLERANCE)])
+
+                if reached_goal:
+                    self.reached_goal_time = rospy.Time.now()
+
+                return False
+            else:
+                return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
 
         if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
-            return (rospy.Time.now() - self.start_time).to_sec() > GRIPPER_HANDLER.toggle_time_seconds() + 1.0
+            return (rospy.Time.now() - self.start_time).to_sec() > GRIPPER_HANDLER.toggle_time_seconds + self.gripper_hold_time
 
         raise Exception("Unrecognized action type!")
 
@@ -115,9 +132,9 @@ ACTIONS = [
     AssemblyAction('move', OVER_BLOCK_1_POSE),
     AssemblyAction('close_gripper', OVER_BLOCK_1_POSE),
     AssemblyAction('move', CENTER_BACK_POSE),
-    AssemblyAction('move', OVER_BLOCK_1_POSE),
-    AssemblyAction('open_gripper', OVER_BLOCK_1_POSE),
-    AssemblyAction('move', CENTER_BACK_POSE),
+    #AssemblyAction('move', OVER_BLOCK_1_POSE),
+    #AssemblyAction('open_gripper', OVER_BLOCK_1_POSE),
+    #AssemblyAction('move', CENTER_BACK_POSE),
 ]
 
 
@@ -137,7 +154,7 @@ def marker_callback(marker_message):
 
 
 def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher):
-    global POSITION_HISTORY, RESPONSE_HISTORY, ERROR_HISTORY, latest_imu_message, IMU_HISTORY, GOAL_POSE_XYZRPY
+    global POSITION_HISTORY, RESPONSE_HISTORY, ERROR_HISTORY, latest_imu_message, IMU_HISTORY, GOAL_POSE_XYZRPY, GOAL_POSE_HISTORY
 
     publish_rate = rospy.Rate(40)
     stop_message = utils.construct_stop_rc_message()
@@ -156,6 +173,8 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
     current_action = ACTIONS.pop(0)
 
     while ((datetime.datetime.now() - start_time).total_seconds() < float(EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
+        goal_not_reached = current_action.reached_goal_time is None
+
         GOAL_POSE_XYZRPY = current_action.goal_pose
         TRAJECTORY_TRACKER.set_goal_position(GOAL_POSE_XYZRPY)
 
@@ -172,16 +191,23 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
             elif current_action.action_type == 'close_gripper':
                 GRIPPER_HANDLER.start_closing()
 
+            print("Starting action: {}".format(current_action))
             current_action.start()
         else:
             if current_action.is_complete(pose_error):
-                rospy.loginfo("Completed action: {}".format(current_action.action_type))
+                rospy.loginfo("Completed action: {}".format(current_action))
                 current_action = ACTIONS.pop(0)
+
+        if goal_not_reached and current_action.reached_goal_time is not None:
+            rospy.loginfo("Reached goal position. Holding.")
 
         go_message = TRAJECTORY_TRACKER.get_next_motion_primitive().as_rc_override
 
         GRIPPER_HANDLER.update()
         GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
+
+        if current_action.action_type == 'move':
+            assert(go_message.channels[GRIPPER_HANDLER.channel] == 1500)
 
         GOAL_POSE_HISTORY.append(GOAL_POSE_XYZRPY)
         POSITION_HISTORY.append(robot_pose_xyzrpy)
@@ -214,7 +240,7 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
 
 def wait_for_marker_data():
     poll_rate = rospy.Rate(10)
-    while TIMES_TRACKED_MARKER_SEEN < 100:
+    while TIMES_TRACKED_MARKER_SEEN < 100 and not rospy.is_shutdown():
         poll_rate.sleep()
 
 
@@ -285,7 +311,7 @@ def main():
         position_history=POSITION_HISTORY,
         response_history=RESPONSE_HISTORY,
         error_history=ERROR_HISTORY,
-        goal_position=GOAL_POSE_XYZRPY,
+        goal_pose_history=GOAL_POSE_HISTORY,
         notes=notes,
         output_directory=output_directory,
         data_collection_time=EXPERIMENT_DURATION_SECONDS,
