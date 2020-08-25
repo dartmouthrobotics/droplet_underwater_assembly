@@ -20,7 +20,12 @@
     <arg name="config_file" value="$(find tag_noise_experiment)/param/flir_land_calibration_1440_1080.yaml"/>
     <arg name="start_nodelet_manager" value="false"/>
     <arg name="color" value="false"/>
+    <arg name="exposure_time" value="9100"/>
   </include>
+
+  <node pkg="imu_complementary_filter" type="complementary_filter_node" name="complementary_filter" required="true">
+      <remap from="/imu/data_raw" to="/mavros/imu/data_raw"/>
+  </node>
 
   <node pkg="minimal_bluerov_control_experiment" output="screen" respawn="false" type="binary_PID_experiment.py" name="binary_PID_experiment_node" required="true"> 
     <param name="dry_run" type="bool" value="$(arg dry_run)"/>
@@ -29,6 +34,6 @@
     </rosparam>
   </node>
 
-  <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/minimal_bluerov_control_experiment/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /tf /mavros/rc/override /mavros/imu/data_raw">
+  <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/minimal_bluerov_control_experiment/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /tf /mavros/rc/override /mavros/imu/data_raw /mavros/imu/data">
   </node>
 </launch>

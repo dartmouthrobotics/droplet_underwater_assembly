@@ -1,66 +1,60 @@
 import collections
 import utils
+import rospy
+import tf
 
 NUMBER_MOTORS = 8
 
 class MotionPrimitive(object):
-    def __init__(self, name, motor_speeds, acceleration):
+    def __init__(self, name, motor_speeds, acceleration, go_duration_seconds, stop_duration_seconds):
         self.name = name
         self.motor_speeds = motor_speeds
         self.acceleration = acceleration
+        self.go_duration_seconds = go_duration_seconds
+        self.stop_duration_seconds = stop_duration_seconds
+        self.start_time = None
 
         assert(len(motor_speeds) == NUMBER_MOTORS)
 
     @property
+    def time_since_started(self):
+        if not self.is_started:
+            return 0.0
+
+        return (rospy.Time.now() - self.start_time).to_sec()
+
+    @property
+    def is_stop(self):
+        if self.is_finished or not self.is_started:
+            return False
+
+        return self.time_since_started > self.go_duration_seconds
+
+    @property
+    def is_go(self):
+        if self.is_finished or not self.is_started:
+            return False
+
+        return self.time_since_started <= self.go_duration_seconds
+
+    def start(self):
+        self.start_time = rospy.Time.now()
+
+    @property
+    def is_started(self):
+        return self.start_time is not None
+
+    @property
+    def is_finished(self):
+        return (rospy.Time.now() - self.start_time).to_sec() > self.go_duration_seconds + self.stop_duration_seconds
+
+    @property
     def as_rc_override(self):
+        if self.is_go:
+            return utils.construct_rc_message(self.motor_speeds)
+
         stop_message = utils.construct_stop_rc_message()
-        return utils.construct_rc_message(self.motor_speeds)
-
-
-class PredictivePositionTracker(object):
-    # starting with 1-d
-    def __init__(self, motion_primitives, forward_prediction_time):
-        self.current_acceleration = None
-        self.current_position = None
-        self.current_velocity = None
-        self.goal_position = None
-
-        self.forward_prediction_time = forward_prediction_time
-        self.motion_primitives = motion_primitives
-
-
-    def set_current_velocity(self, velocity):
-        self.current_velocity = velocity
-
-
-    def set_current_acceleration(self, current_acceleration):
-        self.current_acceleration = current_acceleration
-
-
-    def set_goal_position(self, goal_position):
-        self.goal_position = goal_position
-
-
-    def predict_primitive_effect(self, primitive):
-        predicted_acceleration = self.current_acceleration + primitive.acceleration
-        predicted_next_position = self.current_position + (self.current_velocity * self.forward_prediction_time) + predicted_acceleration * self.forward_prediction_time ** 2 
-
-        return predicted_next_position
-
-    def get_next_primitive():
-        best_next_action = None
-        best_next_error = float("inf")
-
-        for primitive in self.motion_primitives:
-            predicted_result = self.predict_primitive_effect(primitive)
-
-            predicted_error = self.get_error(self.goal_position, predicted_result)
-
-            if predicted_error < best_next_error:
-                best_next_error = predicted_error
-                best_next_action = primitive
-
-        return primitive
+        return stop_message
 
 
 class SinglePrimitiveTracker(object):
@@ -70,30 +64,78 @@ class SinglePrimitiveTracker(object):
     def set_goal_position(self, _):
         pass
 
+    def set_latest_imu_reading(self, _):
+        pass
+
     def set_current_position(self, _):
         pass
+
+    def set_current_velocity(self, _):
+        pass
+
+    def get_error(self):
+        return [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
     def get_next_motion_primitive(self):
         return self.primitives[0]
 
+    def get_next_rc_override(self):
+        return self.get_next_motion_primitive().as_rc_override
 
-class BinaryTrajectoryTracker(object):
-    def __init__(self, primitives):
-        self.goal_position = None
-        self.current_position = None
+
+class PredictivePositionTracker(object):
+    def __init__(self, primitives, forward_prediction_time):
         self.primitives = primitives
+        self.forward_prediction_time = forward_prediction_time
+
+        self.goal_position = None
+        self.current_velocity = None
+        self.current_position = None
 
     def set_goal_position(self, goal):
         self.goal_position = goal
 
-    def set_current_position(self, position):
-        self.current_position = position
+    def set_current_position(self, current):
+        self.current_position = current
+
+    def set_current_velocity(self, current):
+        self.current_velocity = current
 
     def get_error(self):
         return utils.get_error(self.current_position, self.goal_position)
 
     def get_next_motion_primitive(self):
-        error = self.get_error()
+        predicted_x = self.current_position[0] + self.forward_prediction_time * self.current_velocity[0]
+        predicted_y = self.current_position[1] + self.forward_prediction_time * self.current_velocity[1]
+        predicted_yaw = self.current_position[5] + self.forward_prediction_time * self.current_velocity[5]
+
+        predicted_pos = [predicted_x, predicted_y, 0.0, 0.0, 0.0, predicted_yaw]
+        error = utils.get_error(predicted_pos, self.goal_position)
+
+        #controlled_quantities = [error[0], error[1], error[5]]
+
+        #max_error_idx = 0
+        #max_err = float("-inf")
+        #for idx, err in enumerate(controlled_quantities):
+        #    if abs(err) > max_err:
+        #        max_error_idx = idx
+        #        max_error = abs(err)
+
+        #if max_error_idx == 1:
+        #    if error[1] < 0:
+        #        return [primitive for primitive in self.primitives if primitive.name == "+Y"][0]
+
+        #    return [primitive for primitive in self.primitives if primitive.name == "-Y"][0]
+        #elif max_error_idx == 0:
+        #    if error[0] > 0:
+        #        return [primitive for primitive in self.primitives if primitive.name == "+X"][0]
+
+        #    return [primitive for primitive in self.primitives if primitive.name == "-X"][0]
+        #else:
+        #    if error[5] < 0:
+        #        return [primitive for primitive in self.primitives if primitive.name == "+Yaw"][0]
+
+        #    return [primitive for primitive in self.primitives if primitive.name == "-Yaw"][0]
 
         if abs(error[5]) >= 0.05:
             if error[5] < 0:
@@ -113,3 +155,276 @@ class BinaryTrajectoryTracker(object):
 
         return [primitive for primitive in self.primitives if primitive.name == "-X"][0]
 
+    def get_next_rc_override(self):
+        return self.get_next_motion_primitive().as_rc_override
+
+
+class BinaryTrajectoryTracker(object):
+    def __init__(self, primitives):
+        self.goal_position = None
+        self.current_position = None
+        self.primitives = primitives
+
+    def set_goal_position(self, goal):
+        self.goal_position = goal
+
+    def set_current_velocity(self, _):
+        pass
+
+    def set_current_position(self, position):
+        self.current_position = position
+
+    def get_error(self):
+        return utils.get_error(self.current_position, self.goal_position)
+
+    def get_next_motion_primitive(self):
+        error = self.get_error()
+
+        if abs(error[5]) >= 0.07:
+            if error[5] < 0:
+                return [primitive for primitive in self.primitives if primitive.name == "+Yaw"][0]
+
+            return [primitive for primitive in self.primitives if primitive.name == "-Yaw"][0]
+
+        if abs(error[0]) < abs(error[1]):
+            if error[1] < 0:
+                return [primitive for primitive in self.primitives if primitive.name == "+Y"][0]
+
+            return [primitive for primitive in self.primitives if primitive.name == "-Y"][0]
+
+        # X axis
+        if error[0] > 0:
+            return [primitive for primitive in self.primitives if primitive.name == "+X"][0]
+
+        return [primitive for primitive in self.primitives if primitive.name == "-X"][0]
+
+    def get_next_rc_override(self):
+        return self.get_next_motion_primitive().as_rc_override
+
+
+class PIDTracker(object):
+    def __init__(self, x_p, y_p, yaw_p, x_d, y_d, yaw_d, x_i, y_i, yaw_i, pitch_p, pitch_i, pitch_d, roll_p, roll_i, roll_d, z_p, z_i, z_d):
+        self.x_p = x_p
+        self.x_i = x_i
+        self.x_d = x_d
+
+        self.y_p = y_p
+        self.y_i = y_i
+        self.y_d = y_d
+
+        self.yaw_p = yaw_p
+        self.yaw_i = yaw_i
+        self.yaw_d = yaw_d
+
+        self.z_p = z_p
+        self.z_i = z_p
+        self.z_d = z_p
+
+        self.roll_p = roll_p
+        self.roll_i = roll_i
+        self.roll_d = roll_d
+
+        self.pitch_p = pitch_p
+        self.pitch_i = pitch_i
+        self.pitch_d = pitch_d
+
+        self.max_motor_speed = 100
+
+        self.yaw_factor =   [0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+        self.x_factor =     [0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+        self.y_factor =     [0.0,  0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0]
+
+        self.roll_factor =  [1.0, 0.0, -1.0, -1.0, 0.0, -1.0, 0.0, 0.0]
+        self.pitch_factor = [-1.0, 0.0, -1.0, 1.0, 0.0, -1.0, 0.0, 0.0]
+        self.z_factor =     [1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 0.0, 0.0]
+
+        self.forward_minimum_pwms = [
+            18,
+            25,
+            22,
+            20,
+            25,
+            25,
+            20,
+            20,
+        ]
+
+        self.backward_minimum_pwms = [
+            -30,
+            -30,
+            -28,
+            -35,
+            -25,
+            -25,
+            -30,
+            -30,
+        ]
+
+        self.current_position = None
+
+        self.error_integral = [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+        ]
+
+        self.last_position_update_time = None
+        self.latest_imu_reading = None
+
+
+    def convert_thrust_vector_to_motor_intensities(self, thrust_vector):
+        # thrust vector is: x,y,yaw,z,roll,pitch
+        motor_intensities = [0.0] * 8
+
+        max_intensity = 1.0
+
+        # x,y,yaw intensities
+        for i in range(len(motor_intensities)):
+            motor_intensities[i] = (thrust_vector[0] * self.x_factor[i] +
+                thrust_vector[1] * self.y_factor[i] +
+                thrust_vector[2] * self.yaw_factor[i] +
+                thrust_vector[3] * self.z_factor[i] +
+                thrust_vector[4] * self.roll_factor[i] +
+                thrust_vector[5] * self.pitch_factor[i]
+            )
+
+            if abs(motor_intensities[i]) > max_intensity:
+                max_intensity = abs(motor_intensities[i])
+
+        normalized_intensities = [val / max_intensity for val in motor_intensities]
+
+        for intensity in normalized_intensities:
+            assert(abs(intensity) <= 1.0)
+
+        return normalized_intensities
+
+
+    def convert_motor_intensities_to_pwms(self, intensities):
+        offset_motor_speeds = [
+            1500,
+            1500,
+            1500,
+            1500,
+            1500,
+            1500,
+            1500,
+            1500
+        ]
+
+        for i in range(len(offset_motor_speeds)):
+            offset = 0
+
+            if intensities[i] < 0:
+                offset = self.backward_minimum_pwms[i] 
+            elif intensities[i] > 0:
+                offset = self.forward_minimum_pwms[i]
+
+            offset_motor_speeds[i] = offset_motor_speeds[i] + (intensities[i] * self.max_motor_speed) + offset
+
+        return offset_motor_speeds
+
+
+    def update_error_integrals(self, next_position):
+        next_error = utils.get_error(next_position, self.goal_position)
+
+        seconds_since_last_update = (rospy.Time.now() - self.last_position_update_time).to_sec()
+
+        for i in range(len(self.error_integral)):
+            self.error_integral[i] = self.error_integral[i] + (next_error[i] * seconds_since_last_update)
+
+
+    def clear_error_integrals(self):
+        self.error_integral = [0.0] * len(self.error_integral)
+
+
+    def set_current_position(self, position):
+        if self.last_position_update_time is not None:
+            self.update_error_integrals(position)
+
+        self.last_position_update_time = rospy.Time.now()
+        self.current_position = position
+
+
+    def set_current_velocity(self, velocity):
+        self.current_velocity = velocity
+
+
+    def set_goal_position(self, goal):
+        self.goal_position = goal
+
+
+    def get_error(self):
+        return utils.get_error(self.current_position, self.goal_position)
+
+
+    def get_xyyaw_thrust_vector(self):
+        error = self.get_error()
+
+        return [
+            error[0] * self.x_p + self.current_velocity[0] * self.x_d,
+            error[1] * self.y_p + self.current_velocity[1] * self.y_d,
+            error[5] * self.yaw_p + self.current_velocity[5] * self.yaw_d
+        ]
+
+
+    def get_next_motion_primitive(self):
+        return MotionPrimitive("NULL", [1500] * 8, None, 0.0, 0.0)
+
+
+    def set_latest_imu_reading(self, latest_imu):
+        self.latest_imu_reading = latest_imu
+
+
+    def get_angle_error_from_imu_reading(self):
+        imu_orientation = [
+            self.latest_imu_reading.orientation.x,
+            self.latest_imu_reading.orientation.y,
+            self.latest_imu_reading.orientation.z,
+            self.latest_imu_reading.orientation.w
+        ]
+
+        roll, pitch, _ = tf.transformations.euler_from_quaternion(imu_orientation)
+
+        return utils.angle_error_rads(roll, 0.0), utils.angle_error_rads(pitch, 0.0)
+
+
+    def get_zrp_thrust_vector(self):
+        error = self.get_error()
+
+        z_thrust = error[2] * self.z_p + self.current_velocity[2] * self.z_d
+
+        if self.latest_imu_reading is not None:
+            roll_error, pitch_error = self.get_angle_error_from_imu_reading()
+
+            roll_velocity = self.latest_imu_reading.angular_velocity.x
+            pitch_velocity = self.latest_imu_reading.angular_velocity.y
+
+            return [
+                z_thrust,
+                self.roll_p * roll_error + self.roll_d * roll_velocity,
+                self.pitch_p * pitch_error + self.pitch_d * pitch_velocity
+            ]
+
+        return [
+            z_thrust,
+            0.0,
+            0.0,
+        ]
+
+
+    def get_next_rc_override(self):
+        xyyaw_thrusts = self.get_xyyaw_thrust_vector()
+        zrp_thrusts = self.get_zrp_thrust_vector()
+
+        thrust_vector = xyyaw_thrusts + zrp_thrusts
+
+        motor_intensities = self.convert_thrust_vector_to_motor_intensities(thrust_vector)
+        motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
+
+        for speed in motor_speeds:
+            assert((abs(speed) - 1500) <= 150)
+
+        return utils.construct_rc_message(motor_speeds)

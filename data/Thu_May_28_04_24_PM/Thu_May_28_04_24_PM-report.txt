@@ -1,9 +1,0 @@
-Timestamp: Thu May 28 04:24 PM
-Run duration: 10.0 seconds
-Overshoot: 
-    Yaw: 0.0
-    Pitch: 0.0
-    Y: 0.0
-    X: 0.0
-    Z: 0.0
-    Roll: 0.0

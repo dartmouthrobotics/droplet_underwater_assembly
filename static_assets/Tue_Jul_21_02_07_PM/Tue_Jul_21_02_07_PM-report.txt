@@ -1,0 +1,12 @@
+Notes: 
+Timestamp: Tue Jul 21 2020, 02:07 PM
+Run duration: 12000.0 seconds
+Number position samples: 856
+Marker frame rate (average): 21.6980987204
+Overshoot: 
+    Yaw: 0.0
+    Pitch: 0.0
+    Y: 0.0
+    X: 0.0
+    Z: 0.0
+    Roll: 0.0
