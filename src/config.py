@@ -6,6 +6,8 @@ OVER_BLOCK_1_POSE_LOW = [-1.36, -0.140, -0.07, 0, 0, 0] # for before grabbing
 OVER_BLOCK_1_POSE_HIGH = [-1.36, -0.140, -0.00, 0, 0, 0] # for after grabbing
 CENTER_BACK_POSE =  [-1.65, -0.133, 0.02, 0, 0, 0]
 
+EXPERIMENT_DURATION_SECONDS = 240.0
+
 # deprecated 
 STOP_TIME_SECONDS = 0.10
 GO_TIME_SECONDS = 0.3

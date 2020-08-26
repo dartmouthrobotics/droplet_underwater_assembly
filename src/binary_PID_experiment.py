@@ -39,9 +39,7 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 """
 
 
-TRACKED_MARKER_ID = 0
 LATEST_MARKER_MESSAGE = None
-EXPERIMENT_DURATION_SECONDS = 240.0
 MARKER_MESSAGE_HISTORY = []
 POSITION_HISTORY = []
 RESPONSE_HISTORY = []

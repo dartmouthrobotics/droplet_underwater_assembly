@@ -161,12 +161,12 @@ install(PROGRAMS
   src/binary_PID_experiment.py
   src/utils.py
   src/reporting.py
-  src/republish_compressed_stream.py
-  src/paint_markers.py
+  test/republish_compressed_stream.py
+  test/paint_markers.py
   src/trajectory_tracker.py
   src/gripper_handler.py
-  src/open_arm.sh
-  src/close_arm.sh
+  scripts/open_arm.sh
+  scripts/close_arm.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
