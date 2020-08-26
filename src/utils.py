@@ -156,3 +156,19 @@ def to_xyzrpy(translation, orientation):
         orientation[1],
         orientation[2]
     ])
+
+
+def average_velocity(values_history, number_terms):
+    total = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    if number_terms > len(values_history):
+        number_terms = len(values_history)
+    
+    for i in range(number_terms):
+        for j in range(6):
+            total[j] = total[j] + values_history[len(values_history) - 1 - i][j]
+
+    for j in range(6):
+        total[j] = total[j] / float(number_terms)
+
+    return total

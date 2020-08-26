@@ -192,6 +192,12 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
+install(FILES
+  param/bundle-four-stags-aluminum.json
+  param/flir_pool_calibration_1440_1080.yaml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param
+)
+
 install(DIRECTORY static_assets DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 #############

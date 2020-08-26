@@ -1,28 +1,25 @@
 #! /usr/bin/python
 
-import rospy
-import datetime
+# what do we need to do to make this less of a mess...
+# these globals need to be moved somewhere...
 import sys
-import json
-import numpy
-import math
-from mavros_msgs.msg import ParamValue
-from mavros_msgs.srv import ParamSet
 import datetime
+import os
+
+import rospy
+import rospkg
+from mavros_msgs.srv import CommandBool
+import tf
+
+import geometry_msgs.msg
 import mavros_msgs.msg
 import stag_ros.msg
 import sensor_msgs.msg
-import rospkg
-import reporting
-import trajectory_tracker
-from mavros_msgs.srv import CommandBool
-import tf
-import geometry_msgs.msg
-import os
-import collections
 
 import utils
 import gripper_handler
+import reporting
+import trajectory_tracker
 """
 Motor locations:
 
@@ -59,33 +56,8 @@ TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
 PRIMITIVE_HISTORY = []
 
-OVER_BLOCK_1_POSE_LOW = [-1.36, -0.140, -0.07, 0, 0, 0] # for before grabbing
-OVER_BLOCK_1_POSE_HIGH = [-1.36, -0.140, -0.00, 0, 0, 0] # for after grabbing
-CENTER_BACK_POSE =  [-1.65, -0.133, 0.02, 0, 0, 0]
-
-TIGHT_POSE_TOLERANCE = [0.005, 0.005, float("inf"), float("inf"), float("inf"), 0.008]
-COARSE_POSE_TOLERANCE = [0.04, 0.04, float("inf"), float("inf"), float("inf"), 0.05]
-
 debug_pose_publisher = None
 latest_imu_message = None
-
-STOP_TIME_SECONDS = 0.10
-GO_TIME_SECONDS = 0.3
-
-MOTION_PRIMITIVES = [
-    trajectory_tracker.MotionPrimitive("+PITCH",    [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("+ROLL",    [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("+Z",    [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-
-    trajectory_tracker.MotionPrimitive("NULL",      [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("+Yaw",      [1500, 1539, 1500, 1500, 1500, 1500, 1516, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("-Yaw",      [1500, 1465, 1500, 1500, 1500, 1500, 1500, 1465], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("ONE_MOTOR", [1500, 1445, 1500, 1500, 1590, 1500, 1535, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("-Y",        [1500, 1500, 1500, 1500, 1455, 1500, 1456, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("+Y",        [1500, 1500, 1500, 1500, 1545, 1500, 1535, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("+X",        [1500, 1445, 1500, 1500, 1545, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-    trajectory_tracker.MotionPrimitive("-X",        [1500, 1545, 1500, 1500, 1445, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-]
 
 #TRAJECTORY_TRACKER = trajectory_tracker.BinaryTrajectoryTracker(MOTION_PRIMITIVES)
 #TRAJECTORY_TRACKER = trajectory_tracker.PredictivePositionTracker(MOTION_PRIMITIVES, 0.5)
@@ -132,56 +104,6 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
 #    pitch_d=1.0
 #)
 
-class AssemblyAction(object):
-    def __init__(self, action_type, goal_pose, pose_tolerance):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper']
-        self.action_type = action_type
-        self.goal_pose = goal_pose
-        self.start_time = None
-        self.reached_goal_time = None
-        self.position_hold_time = 2.0
-        self.gripper_hold_time = 2.0
-        self.pose_tolerance = pose_tolerance
-
-        assert(self.action_type in self.valid_types)
-        assert(len(self.goal_pose) == 6)
-
-    def __str__(self):
-        if self.action_type == "open_gripper" or self.action_type == "close_gripper":
-
-            return "Action type: {}".format(self.action_type)
-
-        return "Move to: {}".format(self.goal_pose)
-
-    def start(self):
-        self.start_time = rospy.Time.now()
-
-    @property
-    def is_started(self):
-        return self.start_time is not None
-
-    def is_complete(self, pose_error):
-        if self.start_time is None:
-            rospy.logerr("Cannot complete an action that hasn't been started.")
-            return False
-
-        if self.action_type == 'move':
-            if self.reached_goal_time is None:
-                reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
-
-                if reached_goal:
-                    print(pose_error)
-                    self.reached_goal_time = rospy.Time.now()
-
-                return False
-            else:
-                return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
-
-        if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
-            return (rospy.Time.now() - self.start_time).to_sec() > GRIPPER_HANDLER.toggle_time_seconds + self.gripper_hold_time
-
-        raise Exception("Unrecognized action type!")
-
 
 ACTIONS = [
     # round 1
@@ -198,22 +120,6 @@ ACTIONS = [
 #    # round 1
 #    AssemblyAction('move', OVER_BLOCK_1_POSE),
 #]
-
-
-def average_velocity(values_history, number_terms):
-    total = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-
-    if number_terms > len(values_history):
-        number_terms = len(values_history)
-    
-    for i in range(number_terms):
-        for j in range(6):
-            total[j] = total[j] + values_history[len(values_history) - 1 - i][j]
-
-    for j in range(6):
-        total[j] = total[j] / float(number_terms)
-
-    return total
 
 
 def imu_callback(imu_message):
