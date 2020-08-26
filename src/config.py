@@ -1,3 +1,5 @@
+import trajectory_tracker
+
 TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.005, 0.005, float("inf"), float("inf"), float("inf"), 0.008]
 COARSE_POSE_TOLERANCE = [0.04, 0.04, float("inf"), float("inf"), float("inf"), 0.05]

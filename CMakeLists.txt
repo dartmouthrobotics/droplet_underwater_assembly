@@ -161,6 +161,7 @@ install(PROGRAMS
   src/binary_PID_experiment.py
   src/utils.py
   src/reporting.py
+  src/assembly_action.py
   test/republish_compressed_stream.py
   test/paint_markers.py
   src/trajectory_tracker.py
@@ -195,6 +196,7 @@ install(FILES
 install(FILES
   param/bundle-four-stags-aluminum.json
   param/flir_pool_calibration_1440_1080.yaml
+  param/marker_sizes_by_id.yaml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param
 )
 

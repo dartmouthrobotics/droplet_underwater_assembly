@@ -20,6 +20,8 @@ import utils
 import gripper_handler
 import reporting
 import trajectory_tracker
+import assembly_action
+import config
 """
 Motor locations:
 
@@ -105,13 +107,13 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
 
 ACTIONS = [
     # round 1
-    AssemblyAction('move', OVER_BLOCK_1_POSE_LOW, TIGHT_POSE_TOLERANCE),
-    AssemblyAction('close_gripper', OVER_BLOCK_1_POSE_LOW, COARSE_POSE_TOLERANCE),
-    AssemblyAction('move', OVER_BLOCK_1_POSE_HIGH, COARSE_POSE_TOLERANCE),
-    AssemblyAction('move', CENTER_BACK_POSE, COARSE_POSE_TOLERANCE),
-    AssemblyAction('move', OVER_BLOCK_1_POSE_HIGH, TIGHT_POSE_TOLERANCE),
-    AssemblyAction('open_gripper', OVER_BLOCK_1_POSE_HIGH, TIGHT_POSE_TOLERANCE),
-    AssemblyAction('move', CENTER_BACK_POSE, COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_1_POSE_LOW, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_HIGH, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
 ]
 
 #ACTIONS = [
@@ -135,7 +137,7 @@ def marker_callback(marker_message):
         last_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
 
     for marker in marker_message.markers:
-        if marker.id == TRACKED_MARKER_ID:
+        if marker.id == config.TRACKED_MARKER_ID:
             if LATEST_MARKER_MESSAGE is not None:
                 current_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(marker))
                 distance_travelled = utils.get_error(last_marker_pose, current_marker_pose)
@@ -169,7 +171,7 @@ def run_binary_P_control_experiment(rc_override_publisher, debug_pose_publisher)
     current_action = ACTIONS.pop(0)
 
     next_primitive = None
-    while ((datetime.datetime.now() - start_time).total_seconds() < float(EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
+    while ((datetime.datetime.now() - start_time).total_seconds() < float(config.EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
         RUNNING_EXPERIMENT = True
         loop_start = rospy.Time.now()
 
@@ -320,7 +322,7 @@ def main():
         rospy.loginfo("Running in test mode.")
 
     rospy.loginfo("Running control test experiment for {time} seconds".format(
-        time=EXPERIMENT_DURATION_SECONDS
+        time=config.EXPERIMENT_DURATION_SECONDS
     ))
 
     rospy.loginfo("Waiting for enough marker data....")
