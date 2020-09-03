@@ -111,7 +111,7 @@ def matrix_to_pose_stamped(pose_matrix, parent_frame):
     return pose_stamped
 
 
-def get_robot_pose_from_marker(marker, debug_publisher=None):
+def get_robot_pose_from_marker(marker):
     marker_orientation_simplifier_matrix = tf.transformations.euler_matrix(-math.pi / 2.0, math.pi / 2.0, 0.0)
 
     marker_pose_base_link = tf.transformations.concatenate_matrices(
@@ -131,16 +131,6 @@ def get_robot_pose_from_marker(marker, debug_publisher=None):
        )
     )
 
-    if debug_publisher is not None:
-        # easy to use to check that the pose being used for the robot is sane.
-        # the inverse of this pose is the pose used for controlling.
-        debug_publisher.publish(
-            matrix_to_pose_stamped(
-                pose_matrix=marker_pose_base_link,
-                parent_frame="/base_link"
-            )
-        )
-
     current_pose_matrix = tf.transformations.inverse_matrix(marker_pose_base_link)
     _, _, current_orientation, current_translation, _ = tf.transformations.decompose_matrix(current_pose_matrix)
 
@@ -156,6 +146,39 @@ def to_xyzrpy(translation, orientation):
         orientation[1],
         orientation[2]
     ])
+
+
+def pose_stamped_from_xyzrpy(xyzrpy, frame_id, seq, stamp):
+    pose = geometry_msgs.msg.Pose()
+
+    pose.position.x = xyzrpy[0]
+    pose.position.y = xyzrpy[1]
+    pose.position.z = xyzrpy[2]
+
+    orientation = tf.transformations.quaternion_from_euler(xyzrpy[3], xyzrpy[4], xyzrpy[5])
+
+    pose.orientation.x = orientation[0]
+    pose.orientation.y = orientation[1]
+    pose.orientation.z = orientation[2]
+    pose.orientation.w = orientation[3]
+
+    pose_stamped = geometry_msgs.msg.PoseStamped()
+    pose_stamped.pose = pose
+    pose_stamped.header.frame_id = frame_id
+    pose_stamped.header.seq = seq
+    pose_stamped.header.stamp = stamp
+
+    return pose_stamped
+
+
+def send_transform_from_xyzrpy(transform_broadcaster, xyzrpy, parent_frame, child_frame, stamp):
+    transform_broadcaster.sendTransform(
+        tuple(xyzrpy[0:3]),
+        tf.transformations.quaternion_from_euler(xyzrpy[3], xyzrpy[4], xyzrpy[5]),
+        stamp,
+        child_frame,
+        parent_frame,
+    )
 
 
 def average_velocity(values_history, number_terms):

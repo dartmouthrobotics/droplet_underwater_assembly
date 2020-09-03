@@ -161,6 +161,7 @@ install(PROGRAMS
   src/binary_PID_experiment.py
   src/utils.py
   src/reporting.py
+  src/config.py
   src/assembly_action.py
   test/republish_compressed_stream.py
   test/paint_markers.py

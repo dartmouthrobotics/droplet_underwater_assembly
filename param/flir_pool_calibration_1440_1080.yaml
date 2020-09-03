@@ -23,7 +23,7 @@ distortion_model: plumb_bob
 image_height: 1080
 image_width: 1440
 distortion_coeffs:
-- [-0.302856 0.106867 0.001926 0.001794 0.000000]
+- [-0.302856, 0.106867, 0.001926, 0.001794, 0.000000]
 
 #specified as [fx  0 cx 0 fy cy 0  0  1]
 intrinsic_coeffs:
