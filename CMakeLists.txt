@@ -189,9 +189,16 @@ install(PROGRAMS
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 install(FILES
   launch/binary_PID_experiment.launch
-  launch/test_binary_PID_experiment.launch
   launch/stag.launch
+  launch/apm.launch
+  launch/description.launch
+  launch/apm_pluginlists.yaml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(FILES
+  robots/droplet.urdf
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/robots
 )
 
 install(FILES
@@ -214,4 +221,4 @@ install(DIRECTORY static_assets DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # endif()
 
 ## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
+catkin_add_nosetests(test)

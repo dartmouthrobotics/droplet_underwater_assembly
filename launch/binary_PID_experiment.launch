@@ -3,9 +3,9 @@
 <launch>
   <arg name="notes" default="No notes provided."/>
   <arg name="dry_run" default="false"/>
+  <arg name="test" default="false" />
 
   <include file="$(find minimal_bluerov_control_experiment)/launch/description.launch" />
-  <include file="$(find minimal_bluerov_control_experiment)/launch/apm.launch" />
 
   <node pkg="nodelet" type="nodelet" name="bluerov_nodelet_manager" args="manager" output="screen" respawn="true">
       <param name="num_worker_threads" value="3" />
@@ -13,22 +13,27 @@
 
   <include file="$(find minimal_bluerov_control_experiment)/stag.launch"/>
 
-  <include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
-    <arg name="nodelet_manager_name" value="bluerov_nodelet_manager"/> 
-    <arg name="config_file" value="$(find minimal_bluerov_control_experiment)/param/flir_pool_calibration_1440_1080.yaml"/>
-    <arg name="start_nodelet_manager" value="false"/>
-    <arg name="color" value="false"/>
-    <arg name="exposure_time" value="9100"/>
-  </include>
+  <group unless="$(arg test)">
+    <include file="$(find minimal_bluerov_control_experiment)/launch/apm.launch" />
+
+    <include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
+      <arg name="nodelet_manager_name" value="bluerov_nodelet_manager"/> 
+      <arg name="config_file" value="$(find minimal_bluerov_control_experiment)/param/flir_pool_calibration_1440_1080.yaml"/>
+      <arg name="start_nodelet_manager" value="false"/>
+      <arg name="color" value="false"/>
+      <arg name="exposure_time" value="9100"/>
+    </include>
+
+    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/minimal_bluerov_control_experiment/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /tf /mavros/rc/override /mavros/imu/data_raw /mavros/imu/data /binary_PID_experiment_node/goal_pose"></node>
+
+  </group>
 
   <node pkg="imu_complementary_filter" type="complementary_filter_node" name="complementary_filter" required="true">
       <remap from="/imu/data_raw" to="/mavros/imu/data_raw"/>
   </node>
 
   <node pkg="minimal_bluerov_control_experiment" output="screen" respawn="false" type="binary_PID_experiment.py" name="binary_PID_experiment_node" required="true"> 
-    <param name="dry_run" type="bool" value="$(arg dry_run)"/>
-  </node>
-
-  <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/minimal_bluerov_control_experiment/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /tf /mavros/rc/override /mavros/imu/data_raw /mavros/imu/data /binary_PID_experiment_node/goal_pose">
+    <param name="dry_run" type="bool" value="$(arg dry_run)" unless="$(arg test)"/>
+    <param name="dry_run" type="bool" value="true" if="$(arg test)"/>
   </node>
 </launch>

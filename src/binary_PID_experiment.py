@@ -147,15 +147,12 @@ def run_binary_P_control_experiment(rc_override_publisher):
 
     if not DRY_RUN:
         utils.set_motor_arming(True)
-
-    rc_override_publisher.publish(stop_message)
-    rc_override_publisher.publish(stop_message)
+        rospy.loginfo("Motors armed.")
 
     start_time = datetime.datetime.now()
-
     current_action = ACTIONS.pop(0)
-
     next_primitive = None
+
     while ((datetime.datetime.now() - start_time).total_seconds() < float(config.EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
         RUNNING_EXPERIMENT = True
         loop_start = rospy.Time.now()
@@ -203,9 +200,8 @@ def run_binary_P_control_experiment(rc_override_publisher):
                     GRIPPER_HANDLER.start_closing()
 
 
-            if current_action.action_type in ['open_gripper', 'close_gripper']:
-                if reached_goal:
-                    current_action.start()
+            if current_action.action_type in ['open_gripper', 'close_gripper'] and reached_goal:
+                current_action.start()
             else:
                 current_action.start()
 
@@ -254,14 +250,13 @@ def run_binary_P_control_experiment(rc_override_publisher):
 
     rospy.loginfo("Finished data collection")
     RUNNING_EXPERIMENT = False
+
     if not DRY_RUN:
         try:
             utils.set_motor_arming(False)
         except:
             pass
 
-    rc_override_publisher.publish(stop_message)
-    rc_override_publisher.publish(stop_message)
     rc_override_publisher.publish(stop_message)
     rc_override_publisher.publish(stop_message)
 
@@ -303,14 +298,6 @@ def main():
     )
 
     transform_broadcaster = tf.TransformBroadcaster()
-
-    # need to publish goal position
-    # and a tf tree for the platform
-    # lets do a tf tree for the platform
-
-    # lets start out with a tf tree for the build platform
-
-    # and maybe the error
 
     try:
         DRY_RUN = rospy.get_param("~dry_run")
