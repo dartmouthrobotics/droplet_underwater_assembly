@@ -1,1 +1,1 @@
-# Main repository for underwater assembly code
+# Control software for the droplet underwater assembly robotic system
