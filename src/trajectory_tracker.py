@@ -203,6 +203,8 @@ class BinaryTrajectoryTracker(object):
 
 
 class PIDTracker(object):
+    # how should we handle the I-gains?
+    # do a reset at zero crossing? No I think not -- maybe a fixed time window?
     def __init__(self, x_p, y_p, yaw_p, x_d, y_d, yaw_d, x_i, y_i, yaw_i, pitch_p, pitch_i, pitch_d, roll_p, roll_i, roll_d, z_p, z_i, z_d):
         self.x_p = x_p
         self.x_i = x_i
@@ -413,6 +415,14 @@ class PIDTracker(object):
             0.0,
             0.0,
         ]
+
+
+    def update_error_integrals(self):
+        error  = self.get_error()
+        time_since_last_update = rospy.Time.now() - last_update_time 
+
+        last_update_time = rospy.Time.now()
+
 
 
     def get_next_rc_override(self):

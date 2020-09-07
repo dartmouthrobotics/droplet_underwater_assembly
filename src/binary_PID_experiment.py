@@ -51,9 +51,9 @@ goal_pose_publisher = None
 transform_broadcaster = None
 
 TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
-    x_p=3.05,
-    y_p=3.05,
-    yaw_p=2.25, 
+    x_p=4.25,
+    y_p=4.25,
+    yaw_p=2.35, 
     x_d=-1.0, 
     y_d=-0.25,
     yaw_d=1.0,
@@ -63,9 +63,9 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     roll_p=-0.3,
     roll_i=0.0,
     roll_d=1.0,
-    z_p=2.0,
-    z_i=0.0,
-    z_d=-0.75,
+    z_p=4.0,
+    z_i=0.5,
+    z_d=0.00,
     pitch_p=-1.0,
     pitch_i=0.0,
     pitch_d=0.75,
@@ -76,12 +76,11 @@ ACTIONS = [
     # round 1
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_1_POSE_LOW, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_HIGH, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
 ]
 
@@ -151,7 +150,6 @@ def run_binary_P_control_experiment(rc_override_publisher):
 
     start_time = datetime.datetime.now()
     current_action = ACTIONS.pop(0)
-    next_primitive = None
 
     while ((datetime.datetime.now() - start_time).total_seconds() < float(config.EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
         RUNNING_EXPERIMENT = True
@@ -174,9 +172,9 @@ def run_binary_P_control_experiment(rc_override_publisher):
         latest_vel_avg = utils.average_velocity(VELOCITY_HISTORY, 2)
 
         if latest_imu_message is None:
-            TRAJECTORY_TRACKER.set_current_velocity([latest_vel_avg[0], latest_vel_avg[1], latest_vel_avg[2], 0.0, 0.0, 0.0])
+            TRAJECTORY_TRACKER.set_current_velocity([latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, 0.0])
         else:
-            TRAJECTORY_TRACKER.set_current_velocity([latest_vel_avg[0], latest_vel_avg[1], latest_vel_avg[2], 0.0, 0.0, -latest_imu_message.angular_velocity.z])
+            TRAJECTORY_TRACKER.set_current_velocity([latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, -latest_imu_message.angular_velocity.z])
 
         robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
         robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
@@ -195,13 +193,11 @@ def run_binary_P_control_experiment(rc_override_publisher):
             if current_action.action_type == 'open_gripper':
                 if reached_goal:
                     GRIPPER_HANDLER.start_opening()
+                    current_action.start()
             elif current_action.action_type == 'close_gripper':
                 if reached_goal:
                     GRIPPER_HANDLER.start_closing()
-
-
-            if current_action.action_type in ['open_gripper', 'close_gripper'] and reached_goal:
-                current_action.start()
+                    current_action.start()
             else:
                 current_action.start()
 
@@ -221,8 +217,6 @@ def run_binary_P_control_experiment(rc_override_publisher):
         if goal_not_reached and current_action.reached_goal_time is not None:
             rospy.loginfo("Reached goal position. Holding.")
 
-        next_primitive = TRAJECTORY_TRACKER.get_next_motion_primitive()
-        next_primitive.start()
         go_message = TRAJECTORY_TRACKER.get_next_rc_override()
 
         GRIPPER_HANDLER.update()
@@ -230,6 +224,8 @@ def run_binary_P_control_experiment(rc_override_publisher):
 
         if current_action.action_type == 'move':
             assert(go_message.channels[GRIPPER_HANDLER.channel] == 1500)
+        elif current_action.is_started:
+            assert(go_message.channels[GRIPPER_HANDLER.channel] != 1500)
 
         if any([abs(1500 - channel) > 150 for channel in go_message.channels]):
             rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(go_message))
@@ -292,7 +288,7 @@ def main():
     )
 
     goal_pose_publisher = rospy.Publisher(
-        "goal_pose",
+        "/goal_pose",
         geometry_msgs.msg.PoseStamped,
         queue_size=1
     )
