@@ -1,0 +1,59 @@
+---
+- hosts: all
+  tasks:
+    - name: Add ros melodic repository
+      apt_repository:
+        repo: deb http://packages.ros.org/ros/ubuntu bionic main
+        state: present
+        update_cache: no
+        filename: ros-melodic
+      become: yes
+      become_method: sudo
+    - name: Add key for melodic repository
+      apt_key:
+        keyserver: hkp://keyserver.ubuntu.com:80
+        id: C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+      become: yes
+      become_method: sudo
+    - name: Install ros melodic and other apt packages. This will take a while, go get a coffee.
+      apt:
+        pkg:
+          - ros-melodic-desktop-full
+          - ros-melodic-imu-tools
+          - git
+          - build-essential
+          - ros-melodic-mavlink
+          - libgeographic-dev
+          - ros-melodic-geographic-msgs
+          - libunwind-dev
+        update_cache: yes
+      become: yes
+      become_method: sudo
+    - name: Ensure ROS is on the PATH
+      lineinfile:
+        path: /home/vagrant/.bashrc
+        line: source /opt/ros/melodic/setup.bash
+    - name: Create workspace directory
+      file:
+        path: /home/vagrant/catkin-workspace/src
+        state: directory
+    - name: Clone the dartmouth fork of mavros
+      git:
+        repo: https://github.com/dartmouthrobotics/mavros.git
+        dest: /home/vagrant/catkin-workspace/src/mavros
+        accept_hostkey: yes
+    - name: Run geoids data installation scripts
+        shell:
+          
+    - name: Clone the dartmouth fork of spinnaker camera driver
+      git:
+        repo: https://github.com/dartmouthrobotics/spinnaker_sdk_camera_driver.git
+        dest: /home/vagrant/catkin-workspace/src/spinnaker_sdk_camera_driver
+        accept_hostkey: yes
+    - name: Clone the custom dartmouth stag ros integration
+      git:
+        repo: https://github.com/dartmouthrobotics/stag_ros.git
+        dest: /home/vagrant/catkin-workspace/src/stag_ros
+        accept_hostkey: yes
+    - debug:
+        msg: The automated part of the setup process is done. Make sure you install spinnaker, then you can build this code.
