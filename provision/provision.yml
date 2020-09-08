@@ -26,9 +26,14 @@
           - libgeographic-dev
           - ros-melodic-geographic-msgs
           - libunwind-dev
+          - python-pip
         update_cache: yes
       become: yes
       become_method: sudo
+    - name: Install python pip dependencies
+      pip:
+        name:
+          - numpy
     - name: Ensure ROS is on the PATH
       lineinfile:
         path: /home/vagrant/.bashrc
@@ -55,5 +60,9 @@
         repo: https://github.com/dartmouthrobotics/stag_ros.git
         dest: /home/vagrant/catkin-workspace/src/stag_ros
         accept_hostkey: yes
+    - name: Create symlink of droplet code into catkin workspace
+      file:
+        src: /home/vagrant/droplet_underwater_assembly
+        dest: /home/vagrant/catkin-workspace/src/droplet_underwater_assembly
     - debug:
         msg: The automated part of the setup process is done. Make sure you install spinnaker, then you can build this code.
