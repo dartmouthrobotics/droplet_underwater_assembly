@@ -47,9 +47,10 @@
         repo: https://github.com/dartmouthrobotics/mavros.git
         dest: /home/vagrant/catkin-workspace/src/mavros
         accept_hostkey: yes
-    - name: Run geoids data installation scripts
-        shell:
-          
+    - name: Run geoids dataset installation script
+      shell: /home/vagrant/catkin-workspace/src/mavros/mavros/scripts/install_geographiclib_datasets.sh 
+      become: yes
+      become_method: sudo
     - name: Clone the dartmouth fork of spinnaker camera driver
       git:
         repo: https://github.com/dartmouthrobotics/spinnaker_sdk_camera_driver.git
@@ -64,5 +65,7 @@
       file:
         src: /home/vagrant/droplet_underwater_assembly
         dest: /home/vagrant/catkin-workspace/src/droplet_underwater_assembly
-    - debug:
+        state: link
+    - name: The automated part of the setup process is done. Make sure you install spinnaker, then you can build this code.
+      debug:
         msg: The automated part of the setup process is done. Make sure you install spinnaker, then you can build this code.
