@@ -158,13 +158,11 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-  src/binary_PID_experiment.py
+  src/assembly_main.py
   src/utils.py
   src/reporting.py
   src/config.py
   src/assembly_action.py
-  test/republish_compressed_stream.py
-  test/paint_markers.py
   src/trajectory_tracker.py
   src/gripper_handler.py
   scripts/open_arm.sh
@@ -188,9 +186,10 @@ install(PROGRAMS
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 install(FILES
-  launch/binary_PID_experiment.launch
+  launch/assembly_main.launch
   launch/stag.launch
   launch/apm.launch
+  launch/apm_pluginlists.yaml
   launch/description.launch
   launch/apm_pluginlists.yaml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
@@ -221,4 +220,4 @@ install(DIRECTORY static_assets DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # endif()
 
 ## Add folders to be run by python nosetests
-catkin_add_nosetests(test)
+#catkin_add_nosetests(test)

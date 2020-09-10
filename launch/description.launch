@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <param name="robot_description" textfile="$(find minimal_bluerov_control_experiment)/robots/droplet.urdf" />
+  <param name="robot_description" textfile="$(find droplet_underwater_assembly)/robots/droplet.urdf" />
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
   <arg name="model" />
   <arg name="gui" default="False" />
