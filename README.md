@@ -1,14 +1,3 @@
-# Minimal control experiment node
+# Control software for the droplet underwater assembly robotic system
 
-# First pass is only for the yaw axis
-
-Try to center the tag in the yaw axis
-
-What does that look like and what data to report?
-
-We want to take the atan2 of the tag reading in each frame and react with a change in the motor speed
-
-So in each frame, we take the xy position of the tag in the base link frame
-We can plot the error over time and run the code for a specified amount of seconds (a cli arg)
-
-binary pwm python file
+To install, download spinnaker from the flir website: https://meta.box.lenovo.com/v/link/view/a1995795ffba47dbbe45771477319cc3 you need the amd64 version.
