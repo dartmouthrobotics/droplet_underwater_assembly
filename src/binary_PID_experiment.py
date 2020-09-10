@@ -51,8 +51,8 @@ goal_pose_publisher = None
 transform_broadcaster = None
 
 TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
-    x_p=4.25,
-    y_p=4.25,
+    x_p=4.00,
+    y_p=4.00,
     yaw_p=2.35, 
     x_d=-1.0, 
     y_d=-0.25,
@@ -63,8 +63,8 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     roll_p=-0.3,
     roll_i=0.0,
     roll_d=1.0,
-    z_p=4.0,
-    z_i=0.5,
+    z_p=3.5,
+    z_i=0.0,
     z_d=0.00,
     pitch_p=-1.0,
     pitch_i=0.0,
@@ -79,8 +79,10 @@ ACTIONS = [
     assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_HIGH, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
 ]
 
@@ -194,12 +196,22 @@ def run_binary_P_control_experiment(rc_override_publisher):
                 if reached_goal:
                     GRIPPER_HANDLER.start_opening()
                     current_action.start()
+                    TRAJECTORY_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
+                    TRAJECTORY_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
+                    TRAJECTORY_TRACKER.x_i = config.DEFAULT_X_I_GAIN
+                    TRAJECTORY_TRACKER.clear_error_integrals()
+
             elif current_action.action_type == 'close_gripper':
                 if reached_goal:
                     GRIPPER_HANDLER.start_closing()
                     current_action.start()
+                    TRAJECTORY_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
+                    TRAJECTORY_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
+                    TRAJECTORY_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
+                    TRAJECTORY_TRACKER.clear_error_integrals()
             else:
                 current_action.start()
+                TRAJECTORY_TRACKER.clear_error_integrals()
 
             if current_action.is_started:
                 rospy.loginfo("Starting action: {}".format(current_action))
@@ -222,7 +234,7 @@ def run_binary_P_control_experiment(rc_override_publisher):
         GRIPPER_HANDLER.update()
         GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
 
-        if current_action.action_type == 'move':
+        if current_action.action_type == 'move' and current_action.is_started:
             assert(go_message.channels[GRIPPER_HANDLER.channel] == 1500)
         elif current_action.is_started:
             assert(go_message.channels[GRIPPER_HANDLER.channel] != 1500)

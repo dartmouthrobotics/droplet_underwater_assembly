@@ -8,7 +8,7 @@ class AssemblyAction(object):
         self.start_time = None
         self.reached_goal_time = None
         self.position_hold_time = 6.0
-        self.gripper_hold_time = 0.0
+        self.gripper_hold_time = 0.1
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
 
