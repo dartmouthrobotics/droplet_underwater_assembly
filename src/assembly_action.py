@@ -8,7 +8,7 @@ class AssemblyAction(object):
         self.start_time = None
         self.reached_goal_time = None
         self.position_hold_time = 6.0
-        self.gripper_hold_time = 0.1
+        self.gripper_hold_time = 2.5
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
 
@@ -47,7 +47,7 @@ class AssemblyAction(object):
 
         if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
             elapsed_seconds = (rospy.Time.now() - self.start_time).to_sec()
-            complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds
+            complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
 
             return complete
 

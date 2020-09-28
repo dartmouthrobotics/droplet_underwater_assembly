@@ -11,44 +11,40 @@ MAIN_LOOP_RATE = 40
 # base link to gripper center: 68cm
 # grip height: 12cm
 
-OVER_BLOCK_1_POSE_LOW = [-1.36, -0.135, -0.2, 0, 0, 0] # for before grabbing
-OVER_BLOCK_1_POSE_MID_LOW = [-1.36, -0.135, -0.05, 0, 0, 0] # for before grabbing
-OVER_BLOCK_1_POSE_HIGH = [-1.36, -0.135, 0.06, 0, 0, 0] # for after grabbing
-CENTER_BACK_POSE =  [-1.89, -0.135, 0.08, 0, 0, 0]
+CENTER_BACK_POSE =  [-1.89, 0.2, 0.08, -0.35, 0, 0]
+
+# right bottom
+OVER_BLOCK_1_POSE_LOW = [-1.36, -0.135, -0.35, 0, 0, 0] # for before grabbing
+OVER_BLOCK_1_POSE_MID_LOW = [-1.36, -0.135, -0.20, 0, 0, 0] # for before grabbing
+OVER_BLOCK_1_POSE_HIGH = [-1.36, -0.135, -0.10, 0, 0, 0] # for after grabbing
+
+# left bottom
+OVER_BLOCK_2_POSE_LOW = [-1.36, 0.46, -0.32, 0, 0, 0] # for before grabbing
+OVER_BLOCK_2_POSE_MID_LOW = [-1.36, 0.46, -0.20, 0, 0, 0] # for before grabbing
+OVER_BLOCK_2_POSE_HIGH = [-1.36, 0.46, -0.10, 0, 0, 0] # for after grabbing
+
+# right top
+OVER_BLOCK_3_POSE_LOW = list(OVER_BLOCK_1_POSE_LOW)
+OVER_BLOCK_3_POSE_MID_LOW = list(OVER_BLOCK_1_POSE_MID_LOW)
+OVER_BLOCK_3_POSE_HIGH = list(OVER_BLOCK_1_POSE_HIGH)
+# right top
+OVER_BLOCK_3_POSE_LOW[2] = OVER_BLOCK_1_POSE_LOW[2] + 0.18
+OVER_BLOCK_3_POSE_MID_LOW[2] = OVER_BLOCK_1_POSE_MID_LOW[2] + 0.18
+OVER_BLOCK_3_POSE_HIGH[2] = OVER_BLOCK_1_POSE_HIGH[2] + 0.18
+
+# left top
+OVER_BLOCK_4_POSE_LOW = list(OVER_BLOCK_2_POSE_LOW)
+OVER_BLOCK_4_POSE_MID_LOW = list(OVER_BLOCK_2_POSE_MID_LOW)
+OVER_BLOCK_4_POSE_HIGH = list(OVER_BLOCK_2_POSE_HIGH)
+# left top
+OVER_BLOCK_4_POSE_LOW[2] = OVER_BLOCK_2_POSE_LOW[2] + 0.18
+OVER_BLOCK_4_POSE_MID_LOW[2] = OVER_BLOCK_2_POSE_MID_LOW[2] + 0.18
+OVER_BLOCK_4_POSE_HIGH[2] = OVER_BLOCK_2_POSE_HIGH[2] + 0.18
 
 EXPERIMENT_DURATION_SECONDS = 1200.0
 
-# left block is 59.5cm to the left of the other block
-# the blocks are about 17cm tall
-# this is going to get out of hand really fast...
-# maybe need to try bringing in the generality again.
-
-# and we need to stack on top of each location, so that would be 
-
-# deprecated 
-#STOP_TIME_SECONDS = 0.10
-#GO_TIME_SECONDS = 0.3
-#MOTION_PRIMITIVES = [
-#    trajectory_tracker.MotionPrimitive("+PITCH",    [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("+ROLL",    [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("+Z",    [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#
-#    trajectory_tracker.MotionPrimitive("NULL",      [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("+Yaw",      [1500, 1539, 1500, 1500, 1500, 1500, 1516, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("-Yaw",      [1500, 1465, 1500, 1500, 1500, 1500, 1500, 1465], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("ONE_MOTOR", [1500, 1445, 1500, 1500, 1590, 1500, 1535, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("-Y",        [1500, 1500, 1500, 1500, 1455, 1500, 1456, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("+Y",        [1500, 1500, 1500, 1500, 1545, 1500, 1535, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("+X",        [1500, 1445, 1500, 1500, 1545, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#    trajectory_tracker.MotionPrimitive("-X",        [1500, 1545, 1500, 1500, 1445, 1500, 1500, 1500], None, GO_TIME_SECONDS, STOP_TIME_SECONDS),
-#]
-
 PLATFORM_FRAME_ID = "/build_platform_0"
 
-PlatformSlot = collections.namedtuple("PlatformSlot", ["frame_id", "location"])
-PLATFORM_SLOTS = [
-    PlatformSlot("slot_0", [-1.49, -0.135, -0.91, 0.0, 0.0, 0.0])
-]
 
 BLOCK_HELD_Z_I_GAIN = 0.15
 BLOCK_HELD_X_I_GAIN = 0.1

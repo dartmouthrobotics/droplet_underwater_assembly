@@ -37,6 +37,20 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 8: bottom back right
 """
 
+"""
+TODO:
+    * Handling of non-level build platforms
+    Handling (more gracefully) of more slots on the platform
+"""
+
+"""
+To handle a non-level build platform, what can we start with? Lets get a bag file (after fixing the hand, maybe on Sunday.)
+The way that the non-level platform would work is that we compute the platform's roll and pitch in world frame based on the imu's orientation and each tag reading.
+
+How can we do this? I guess a running average would be the best since it should never change.
+How does it influence the things we tell the robot to do?
+"""
+
 
 LATEST_MARKER_MESSAGE = None
 RAW_VELOCITY_HISTORY = []
@@ -65,24 +79,81 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     roll_d=1.0,
     z_p=3.5,
     z_i=0.0,
-    z_d=0.00,
+    z_d=-0.50,
     pitch_p=-1.0,
     pitch_i=0.0,
     pitch_d=0.75,
 )
 
+# here is the structure then, we have dropoff and pickup slots corresponding to the two platforms
+# what would be the concise way to label these. We could say "pickup slot (i)" and "drop slot (i)"
+# or we could make the names more general. Pickup (platform_(i), slot_(i)). How would that look in the tf tree? We could just give the platforms
+# a marker id
 
 ACTIONS = [
-    # round 1
+    # 2 to 3
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+
+    # 3 to 2
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_3_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_2_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+
+    # 1 to 4
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_4_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+
+    # 4 to 1
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+
+    # 2 to 3
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
 ]
 
@@ -135,6 +206,16 @@ def publish_platform_transforms(current_pose, marker_stamp, transform_broadcaste
             child_frame=slot.frame_id,
             stamp=marker_stamp
         )
+
+
+def check_message_safety(message, max_pwm):
+    if any([abs(1500 - channel) > max_pwm for channel in go_message.channels]):
+        rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(go_message))
+
+        if not DRY_RUN:
+            set_motor_arming(False)
+
+        sys.exit(1)
 
 
 def run_binary_P_control_experiment(rc_override_publisher):
@@ -211,7 +292,6 @@ def run_binary_P_control_experiment(rc_override_publisher):
                     TRAJECTORY_TRACKER.clear_error_integrals()
             else:
                 current_action.start()
-                TRAJECTORY_TRACKER.clear_error_integrals()
 
             if current_action.is_started:
                 rospy.loginfo("Starting action: {}".format(current_action))
@@ -234,26 +314,14 @@ def run_binary_P_control_experiment(rc_override_publisher):
         GRIPPER_HANDLER.update()
         GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
 
-        if current_action.action_type == 'move' and current_action.is_started:
-            assert(go_message.channels[GRIPPER_HANDLER.channel] == 1500)
-        elif current_action.is_started:
-            assert(go_message.channels[GRIPPER_HANDLER.channel] != 1500)
-
-        if any([abs(1500 - channel) > 150 for channel in go_message.channels]):
-            rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(go_message))
-
-            if not DRY_RUN:
-                set_motor_arming(False)
-
-            sys.exit(1)
+        check_message_safety(go_message, 150)
+        rc_override_publisher.publish(go_message)
 
         loop_end = rospy.Time.now()
-
         loop_time = (loop_end - loop_start).to_sec()
         if (loop_time > 0.03):
             rospy.logwarn("Slow loop!")
 
-        rc_override_publisher.publish(go_message)
         publish_rate.sleep()
 
     rospy.loginfo("Finished data collection")

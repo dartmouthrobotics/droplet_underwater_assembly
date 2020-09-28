@@ -32,7 +32,7 @@
       <remap from="/imu/data_raw" to="/mavros/imu/data_raw"/>
   </node>
 
-  <node pkg="droplet_underwater_assembly" output="screen" respawn="false" type="binary_PID_experiment.py" name="binary_PID_experiment_node" required="true"> 
+  <node pkg="droplet_underwater_assembly" output="screen" respawn="false" type="assembly_main.py" name="assembly_main_node" required="true"> 
     <param name="dry_run" type="bool" value="$(arg dry_run)" unless="$(arg test)"/>
     <param name="dry_run" type="bool" value="true" if="$(arg test)"/>
   </node>
