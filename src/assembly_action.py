@@ -29,26 +29,33 @@ class AssemblyAction(object):
     def is_started(self):
         return self.start_time is not None
 
+    def move_is_complete(self, pose_error):
+        if self.reached_goal_time is None:
+            reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
+
+            if reached_goal:
+                self.reached_goal_time = rospy.Time.now()
+
+            return False
+        else:
+            return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
+
+    def gripper_action_is_complete(self):
+        elapsed_seconds = (rospy.Time.now() - self.start_time).to_sec()
+        complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
+
+        return complete
+        
+
     def is_complete(self, pose_error):
         if self.start_time is None:
             rospy.logerr("Cannot complete an action that hasn't been started.")
             return False
 
         if self.action_type == 'move':
-            if self.reached_goal_time is None:
-                reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
-
-                if reached_goal:
-                    self.reached_goal_time = rospy.Time.now()
-
-                return False
-            else:
-                return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
+            return self.move_is_complete(pose_error)
 
         if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
-            elapsed_seconds = (rospy.Time.now() - self.start_time).to_sec()
-            complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
-
-            return complete
+            return self.gripper_action_is_complete(pose_error)
 
         raise Exception("Unrecognized action type!")

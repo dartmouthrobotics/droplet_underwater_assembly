@@ -1,0 +1,107 @@
+{
+    "tight_tolerance": [0.025, 0.025, 0.025, 1000000.0, 10000000.0, 0.018],
+    "loose_tolerance": [0.025, 0.025, 0.025, 1000000.0, 10000000.0, 0.018],
+    "grab_height": 0.08,
+    "over_slot_hover_height": 0.2,
+    "center_back_pose": [-1.89, 0.2, 0.08, -0.35, 0.0, 0.0],
+    "number_marker_readings_before_start": 100,
+    "max_duration": 1200.0,
+    "main_loop_rate": 40,
+    "gripper_config": {
+        "toggle_pwm": 50,
+        "channel": 8,
+        "toggle_time_seconds": 2.5,
+        "direction_modifier": 1
+    },
+    "assembly_action_config": {
+        "position_hold_time": 6.0,
+        "gripper_hold_time": 2.5
+    },
+    "controller_config": {
+        "x_factor": [0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+        "y_factor": [0.0,  0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0],
+        "z_factor": [1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 0.0, 0.0],
+        "roll_factor": [1.0, 0.0, -1.0, -1.0, 0.0, -1.0, 0.0, 0.0],
+        "pitch_factor": [-1.0, 0.0, -1.0, 1.0, 0.0, -1.0, 0.0, 0.0],
+        "yaw_factor": [0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0],
+        "max_motor_speed": 110,
+        "forward_minimum_pwms": [
+            18,
+            25,
+            22,
+            20,
+            25,
+            25,
+            20,
+            20
+        ],
+        "backward_minimum_pwms": [
+            -30,
+            -30,
+            -28,
+            -35,
+            -25,
+            -25,
+            -30,
+            -30
+        ],
+        "no_block_gains": {
+            "x_p": 4.00,
+            "y_p": 4.00,
+            "yaw_p": 2.35, 
+            "x_d": -1.0, 
+            "y_d": -0.25,
+            "yaw_d": 1.0,
+            "x_i": 0.05,
+            "y_i": 0.05,
+            "yaw_i": 0.0,
+            "roll_p": -0.3,
+            "roll_i": 0.0,
+            "roll_d": 1.0,
+            "z_p": 3.5,
+            "z_i": 0.05,
+            "z_d": -0.50,
+            "pitch_p": -1.0,
+            "pitch_i": 0.0,
+            "pitch_d": 0.75
+        },
+        "block_held_gains": {
+            "x_p": 4.00,
+            "y_p": 4.00,
+            "yaw_p": 2.35, 
+            "x_d": -1.0, 
+            "y_d": -0.25,
+            "yaw_d": 1.0,
+            "x_i": 0.1,
+            "y_i": 0.1,
+            "yaw_i": 0.0,
+            "roll_p": -0.3,
+            "roll_i": 0.0,
+            "roll_d": 1.0,
+            "z_p": 3.5,
+            "z_i": 0.15,
+            "z_d": -0.50,
+            "pitch_p": -1.0,
+            "pitch_i": 0.0,
+            "pitch_d": 0.75
+        }
+    },
+    "build_platform": {
+        "frame_id": "/build_platform",
+        "marker_id": 0,
+        "farthest_pickup_slot_x": 1.36,
+        "farthest_dropoff_slot_x": 1.36,
+        "slot_length": 0.05,
+        "slot_height": 0.15,
+        "number_pickup_columns": 8,
+        "number_pickup_rows": 2,
+        "number_dropoff_columns": 9,
+        "number_dropoff_rows": 2
+    },
+    "build_plan": [
+        {
+            "pickup_slot": 2,
+            "drop_slot": 2
+        }
+    ]
+}

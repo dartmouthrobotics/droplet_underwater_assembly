@@ -1,6 +1,7 @@
 import trajectory_tracker
 import collections
 
+# got it
 TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.025, 0.025, 0.025, float("inf"), float("inf"), 0.018]
 COARSE_POSE_TOLERANCE = [0.04, 0.04, 0.04, float("inf"), float("inf"), 0.05]
@@ -11,6 +12,7 @@ MAIN_LOOP_RATE = 40
 # base link to gripper center: 68cm
 # grip height: 12cm
 
+# got it
 CENTER_BACK_POSE =  [-1.89, 0.2, 0.08, -0.35, 0, 0]
 
 # right bottom
@@ -41,15 +43,18 @@ OVER_BLOCK_4_POSE_LOW[2] = OVER_BLOCK_2_POSE_LOW[2] + 0.18
 OVER_BLOCK_4_POSE_MID_LOW[2] = OVER_BLOCK_2_POSE_MID_LOW[2] + 0.18
 OVER_BLOCK_4_POSE_HIGH[2] = OVER_BLOCK_2_POSE_HIGH[2] + 0.18
 
+# got it
 EXPERIMENT_DURATION_SECONDS = 1200.0
 
+# got it
 PLATFORM_FRAME_ID = "/build_platform_0"
 
 
-BLOCK_HELD_Z_I_GAIN = 0.15
-BLOCK_HELD_X_I_GAIN = 0.1
-BLOCK_HELD_Y_I_GAIN = 0.1
-
-DEFAULT_X_I_GAIN = 0.05
-DEFAULT_Y_I_GAIN = 0.05
-DEFAULT_Z_I_GAIN = 0.05
+# got them
+#BLOCK_HELD_Z_I_GAIN = 0.15
+#BLOCK_HELD_X_I_GAIN = 0.1
+#BLOCK_HELD_Y_I_GAIN = 0.1
+#
+#DEFAULT_X_I_GAIN = 0.05
+#DEFAULT_Y_I_GAIN = 0.05
+#DEFAULT_Z_I_GAIN = 0.05

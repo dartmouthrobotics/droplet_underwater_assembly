@@ -2,10 +2,11 @@ import utils
 import rospy
 
 class GripperHandler(object):
-    def __init__(self):
-        self.toggle_time_seconds = 2.5 
-        self.channel = 8
-        self.toggle_pwm = 50
+    def __init__(self, config):
+        self.toggle_time_seconds = config["gripper_config"]["toggle_time_seconds"]
+        self.channel = config["gripper_config"]["channel"]
+        self.toggle_pwm = config["gripper_config"]["toggle_pwm"]
+        self.direction_modifier = config["gripper_config"]["direction_modifier"]
 
         self.toggle_start_time = None
 
@@ -64,7 +65,7 @@ class GripperHandler(object):
         self.move_direction = -1
 
     def mix_into_rc_override_message(self, rc_override_message):
-        rc_override_message.channels[self.channel] = 1500 - (self.move_direction * self.toggle_pwm) # the new chip I soldered reverses the meaning of the sign
+        rc_override_message.channels[self.channel] = 1500 + (self.direction_modifier * self.move_direction * self.toggle_pwm)
 
     def close_gripper_blocking(self, rc_override_publisher):
         self.move_gripper_blocking(rc_override_publisher, -1)
