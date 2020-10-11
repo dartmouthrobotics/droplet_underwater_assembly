@@ -3,9 +3,10 @@ import rospy
 
 class GripperHandler(object):
     def __init__(self):
-        self.toggle_time_seconds = 2.5 
+        self.toggle_time_seconds = 3.0 
         self.channel = 8
         self.toggle_pwm = 50
+        self.close_time_addon = 0.5
 
         self.toggle_start_time = None
 
@@ -42,7 +43,11 @@ class GripperHandler(object):
 
         current_time = rospy.Time.now()
 
-        if (current_time - self.toggle_start_time).to_sec() > self.toggle_time_seconds:
+        toggle_time_addon = 0.0
+        if self.move_direction == -1:
+            toggle_time_addon = self.close_time_addon
+
+        if (current_time - self.toggle_start_time).to_sec() > self.toggle_time_seconds + toggle_time_addon:
             rospy.loginfo("Completed moving gripper.")
             self.move_direction = 0
             self.toggle_start_time = None
@@ -64,7 +69,7 @@ class GripperHandler(object):
         self.move_direction = -1
 
     def mix_into_rc_override_message(self, rc_override_message):
-        rc_override_message.channels[self.channel] = 1500 - (self.move_direction * self.toggle_pwm) # the new chip I soldered reverses the meaning of the sign
+        rc_override_message.channels[self.channel] = 1500 + (self.move_direction * self.toggle_pwm) # the new chip I soldered reverses the meaning of the sign
 
     def close_gripper_blocking(self, rc_override_publisher):
         self.move_gripper_blocking(rc_override_publisher, -1)

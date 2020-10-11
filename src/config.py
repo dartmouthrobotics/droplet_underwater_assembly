@@ -13,33 +13,50 @@ MAIN_LOOP_RATE = 40
 
 CENTER_BACK_POSE =  [-1.89, 0.2, 0.08, -0.35, 0, 0]
 
-# right bottom
-OVER_BLOCK_1_POSE_LOW = [-1.36, -0.135, -0.35, 0, 0, 0] # for before grabbing
-OVER_BLOCK_1_POSE_MID_LOW = [-1.36, -0.135, -0.20, 0, 0, 0] # for before grabbing
-OVER_BLOCK_1_POSE_HIGH = [-1.36, -0.135, -0.10, 0, 0, 0] # for after grabbing
+SLOT_X_STRIDE = 0.08
+SLOT_Z_STRIDE = 0.18
 
-# left bottom
-OVER_BLOCK_2_POSE_LOW = [-1.36, 0.46, -0.32, 0, 0, 0] # for before grabbing
-OVER_BLOCK_2_POSE_MID_LOW = [-1.36, 0.46, -0.20, 0, 0, 0] # for before grabbing
-OVER_BLOCK_2_POSE_HIGH = [-1.36, 0.46, -0.10, 0, 0, 0] # for after grabbing
+# right bottom back
+#OVER_BLOCK_1_POSE_LOW = [-1.15, -0.135, -0.35, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_1_POSE_MID_LOW = [-1.15, -0.135, -0.20, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_1_POSE_HIGH = [-1.15, -0.135, -0.10, 0, 0, 0] # for after grabbing
+#
+## left bottom back
+#OVER_BLOCK_2_POSE_LOW = [-1.30, 0.46, -0.32, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_2_POSE_MID_LOW = [-1.30, 0.46, -0.20, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_2_POSE_HIGH = [-1.30, 0.46, -0.10, 0, 0, 0] # for after grabbing
+#
+## right top
+#OVER_BLOCK_3_POSE_LOW = list(OVER_BLOCK_1_POSE_LOW)
+##OVER_BLOCK_3_POSE_MID_LOW = list(OVER_BLOCK_1_POSE_MID_LOW)
+##OVER_BLOCK_3_POSE_HIGH = list(OVER_BLOCK_1_POSE_HIGH)
+## right top
+#OVER_BLOCK_3_POSE_LOW[2] = OVER_BLOCK_1_POSE_LOW[2] + 0.18
+##OVER_BLOCK_3_POSE_MID_LOW[2] = OVER_BLOCK_1_POSE_MID_LOW[2] + 0.18
+##OVER_BLOCK_3_POSE_HIGH[2] = OVER_BLOCK_1_POSE_HIGH[2] + 0.18
+#OVER_BLOCK_3_POSE_LOW[0] = OVER_BLOCK_1_POSE_LOW[0] - 0.16
+##OVER_BLOCK_3_POSE_MID_LOW[0] = OVER_BLOCK_1_POSE_MID_LOW[0] - 0.16
+##OVER_BLOCK_3_POSE_HIGH[0] = OVER_BLOCK_1_POSE_HIGH[0] - 0.16
+#
+## left top
+#OVER_BLOCK_4_POSE_LOW = list(OVER_BLOCK_2_POSE_LOW)
+##OVER_BLOCK_4_POSE_MID_LOW = list(OVER_BLOCK_2_POSE_MID_LOW)
+##OVER_BLOCK_4_POSE_HIGH = list(OVER_BLOCK_2_POSE_HIGH)
+## left top
+##OVER_BLOCK_4_POSE_LOW[2] = OVER_BLOCK_2_POSE_LOW[2] + 0.18
+##OVER_BLOCK_4_POSE_MID_LOW[2] = OVER_BLOCK_2_POSE_MID_LOW[2] + 0.18
+##OVER_BLOCK_4_POSE_HIGH[2] = OVER_BLOCK_2_POSE_HIGH[2] + 0.18
+##
+### left front
+##OVER_BLOCK_5_POSE_LOW = [-1.63, 0.46, -0.32, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_5_POSE_MID_LOW = [-1.63, 0.46, -0.20, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_5_POSE_HIGH = [-1.63, 0.46, -0.10, 0, 0, 0] # for after grabbing
+##
+### right bottom front
+##OVER_BLOCK_6_POSE_LOW = [-1.56, -0.135, -0.35, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_6_POSE_MID_LOW = [-1.56, -0.135, -0.20, 0, 0, 0] # for before grabbing
+##OVER_BLOCK_6_POSE_HIGH = [-1.56, -0.135, -0.10, 0, 0, 0] # for after grabbing
 
-# right top
-OVER_BLOCK_3_POSE_LOW = list(OVER_BLOCK_1_POSE_LOW)
-OVER_BLOCK_3_POSE_MID_LOW = list(OVER_BLOCK_1_POSE_MID_LOW)
-OVER_BLOCK_3_POSE_HIGH = list(OVER_BLOCK_1_POSE_HIGH)
-# right top
-OVER_BLOCK_3_POSE_LOW[2] = OVER_BLOCK_1_POSE_LOW[2] + 0.18
-OVER_BLOCK_3_POSE_MID_LOW[2] = OVER_BLOCK_1_POSE_MID_LOW[2] + 0.18
-OVER_BLOCK_3_POSE_HIGH[2] = OVER_BLOCK_1_POSE_HIGH[2] + 0.18
-
-# left top
-OVER_BLOCK_4_POSE_LOW = list(OVER_BLOCK_2_POSE_LOW)
-OVER_BLOCK_4_POSE_MID_LOW = list(OVER_BLOCK_2_POSE_MID_LOW)
-OVER_BLOCK_4_POSE_HIGH = list(OVER_BLOCK_2_POSE_HIGH)
-# left top
-OVER_BLOCK_4_POSE_LOW[2] = OVER_BLOCK_2_POSE_LOW[2] + 0.18
-OVER_BLOCK_4_POSE_MID_LOW[2] = OVER_BLOCK_2_POSE_MID_LOW[2] + 0.18
-OVER_BLOCK_4_POSE_HIGH[2] = OVER_BLOCK_2_POSE_HIGH[2] + 0.18
 
 EXPERIMENT_DURATION_SECONDS = 1200.0
 

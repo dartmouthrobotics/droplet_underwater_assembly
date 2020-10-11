@@ -85,77 +85,88 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     pitch_d=0.75,
 )
 
-# here is the structure then, we have dropoff and pickup slots corresponding to the two platforms
-# what would be the concise way to label these. We could say "pickup slot (i)" and "drop slot (i)"
-# or we could make the names more general. Pickup (platform_(i), slot_(i)). How would that look in the tf tree? We could just give the platforms
-# a marker id
 
-ACTIONS = [
-    # 2 to 3
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+def construct_slot_matrix(min_slot, slot_x_stride, slot_z_stride, number_x_strides, number_z_strides):
+    slot_matrix = []
+    for row in range(number_z_strides):
+        current_row = []
+        for col in range(number_x_strides):
+            current_slot = list(min_slot)
+            current_slot[0] = current_slot[0] + slot_x_stride * col
+            current_slot[2] = current_slot[2] + row * slot_z_stride
 
-    # 3 to 2
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_3_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_2_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+        slot_matrix.append(current_row)
 
-    # 1 to 4
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_1_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_4_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    return slot_matrix
 
-    # 4 to 1
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
 
-    # 2 to 3
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-]
+def get_actions_for_slot_pair(from_slot_low, to_slot_low):
+    from_slot_mid_low = list(from_slot)
+    from_slot_mid_low[2] = from_slot_mid_low[2] + config.MID_LOW_Z_OFFSET
+
+    from_slot_high = list(from_slot)
+    from_slot_high[2] = from_slot_high[2] + config.HIGH_Z_OFFSET
+
+    to_slot_mid_low = list(to_slot)
+    to_slot_mid_low[2] = to_slot_mid_low[2] + config.MID_LOW_Z_OFFSET
+
+    to_slot_high = list(to_slot)
+    to_slot_high[2] = to_slot_high[2] + config.HIGH_Z_OFFSET
+
+    return [
+        assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', from_slot_high, config.COARSE_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', from_slot_low, config.TIGHT_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('close_gripper', from_slot_low, config.TIGHT_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', from_slot_high, config.COARSE_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', to_slot_high, config.COARSE_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', to_slot_mid_low, config.TIGHT_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('open_gripper', to_slot_mid_low, config.TIGHT_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', to_slot_high, config.COARSE_POSE_TOLERANCE),
+        assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    ]
+
+#ACTIONS = [
+#    # 5 to 1
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_5_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#
+#    # 4 to 6
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_6_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#
+#    # 2 to 3
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#]
 
 for action in ACTIONS:
     action.gripper_handler = GRIPPER_HANDLER
@@ -209,8 +220,8 @@ def publish_platform_transforms(current_pose, marker_stamp, transform_broadcaste
 
 
 def check_message_safety(message, max_pwm):
-    if any([abs(1500 - channel) > max_pwm for channel in go_message.channels]):
-        rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(go_message))
+    if any([abs(1500 - channel) > max_pwm for channel in message.channels]):
+        rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(message))
 
         if not DRY_RUN:
             set_motor_arming(False)
@@ -262,7 +273,7 @@ def run_binary_P_control_experiment(rc_override_publisher):
         robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
         robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
 
-        publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
+        #publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
 
         TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
         TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
