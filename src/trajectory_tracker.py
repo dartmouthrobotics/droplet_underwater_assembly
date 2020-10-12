@@ -5,201 +5,23 @@ import tf
 
 NUMBER_MOTORS = 8
 
-#class MotionPrimitive(object):
-#    def __init__(self, name, motor_speeds, acceleration, go_duration_seconds, stop_duration_seconds):
-#        self.name = name
-#        self.motor_speeds = motor_speeds
-#        self.acceleration = acceleration
-#        self.go_duration_seconds = go_duration_seconds
-#        self.stop_duration_seconds = stop_duration_seconds
-#        self.start_time = None
-#
-#        assert(len(motor_speeds) == NUMBER_MOTORS)
-#
-#    @property
-#    def time_since_started(self):
-#        if not self.is_started:
-#            return 0.0
-#
-#        return (rospy.Time.now() - self.start_time).to_sec()
-#
-#    @property
-#    def is_stop(self):
-#        if self.is_finished or not self.is_started:
-#            return False
-#
-#        return self.time_since_started > self.go_duration_seconds
-#
-#    @property
-#    def is_go(self):
-#        if self.is_finished or not self.is_started:
-#            return False
-#
-#        return self.time_since_started <= self.go_duration_seconds
-#
-#    def start(self):
-#        self.start_time = rospy.Time.now()
-#
-#    @property
-#    def is_started(self):
-#        return self.start_time is not None
-#
-#    @property
-#    def is_finished(self):
-#        return (rospy.Time.now() - self.start_time).to_sec() > self.go_duration_seconds + self.stop_duration_seconds
-#
-#    @property
-#    def as_rc_override(self):
-#        if self.is_go:
-#            return utils.construct_rc_message(self.motor_speeds)
-#
-#        stop_message = utils.construct_stop_rc_message()
-#        return stop_message
-#
-#
-#class SinglePrimitiveTracker(object):
-#    def __init__(self, primitives):
-#        self.primitives = primitives
-#
-#    def set_goal_position(self, _):
-#        pass
-#
-#    def set_latest_imu_reading(self, _):
-#        pass
-#
-#    def set_current_position(self, _):
-#        pass
-#
-#    def set_current_velocity(self, _):
-#        pass
-#
-#    def get_error(self):
-#        return [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-#
-#    def get_next_motion_primitive(self):
-#        return self.primitives[0]
-#
-#    def get_next_rc_override(self):
-#        return self.get_next_motion_primitive().as_rc_override
-#
-#
-#class PredictivePositionTracker(object):
-#    def __init__(self, primitives, forward_prediction_time):
-#        self.primitives = primitives
-#        self.forward_prediction_time = forward_prediction_time
-#
-#        self.goal_position = None
-#        self.current_velocity = None
-#        self.current_position = None
-#
-#    def set_goal_position(self, goal):
-#        self.goal_position = goal
-#
-#    def set_current_position(self, current):
-#        self.current_position = current
-#
-#    def set_current_velocity(self, current):
-#        self.current_velocity = current
-#
-#    def get_error(self):
-#        return utils.get_error(self.current_position, self.goal_position)
-#
-#    def get_next_motion_primitive(self):
-#        predicted_x = self.current_position[0] + self.forward_prediction_time * self.current_velocity[0]
-#        predicted_y = self.current_position[1] + self.forward_prediction_time * self.current_velocity[1]
-#        predicted_yaw = self.current_position[5] + self.forward_prediction_time * self.current_velocity[5]
-#
-#        predicted_pos = [predicted_x, predicted_y, 0.0, 0.0, 0.0, predicted_yaw]
-#        error = utils.get_error(predicted_pos, self.goal_position)
-#
-#        #controlled_quantities = [error[0], error[1], error[5]]
-#
-#        #max_error_idx = 0
-#        #max_err = float("-inf")
-#        #for idx, err in enumerate(controlled_quantities):
-#        #    if abs(err) > max_err:
-#        #        max_error_idx = idx
-#        #        max_error = abs(err)
-#
-#        #if max_error_idx == 1:
-#        #    if error[1] < 0:
-#        #        return [primitive for primitive in self.primitives if primitive.name == "+Y"][0]
-#
-#        #    return [primitive for primitive in self.primitives if primitive.name == "-Y"][0]
-#        #elif max_error_idx == 0:
-#        #    if error[0] > 0:
-#        #        return [primitive for primitive in self.primitives if primitive.name == "+X"][0]
-#
-#        #    return [primitive for primitive in self.primitives if primitive.name == "-X"][0]
-#        #else:
-#        #    if error[5] < 0:
-#        #        return [primitive for primitive in self.primitives if primitive.name == "+Yaw"][0]
-#
-#        #    return [primitive for primitive in self.primitives if primitive.name == "-Yaw"][0]
-#
-#        if abs(error[5]) >= 0.05:
-#            if error[5] < 0:
-#                return [primitive for primitive in self.primitives if primitive.name == "+Yaw"][0]
-#
-#            return [primitive for primitive in self.primitives if primitive.name == "-Yaw"][0]
-#
-#        if abs(error[0]) < abs(error[1]):
-#            if error[1] < 0:
-#                return [primitive for primitive in self.primitives if primitive.name == "+Y"][0]
-#
-#            return [primitive for primitive in self.primitives if primitive.name == "-Y"][0]
-#
-#        # X axis
-#        if error[0] > 0:
-#            return [primitive for primitive in self.primitives if primitive.name == "+X"][0]
-#
-#        return [primitive for primitive in self.primitives if primitive.name == "-X"][0]
-#
-#    def get_next_rc_override(self):
-#        return self.get_next_motion_primitive().as_rc_override
-#
-#
-#class BinaryTrajectoryTracker(object):
-#    def __init__(self, primitives):
-#        self.goal_position = None
-#        self.current_position = None
-#        self.primitives = primitives
-#
-#    def set_goal_position(self, goal):
-#        self.goal_position = goal
-#
-#    def set_current_velocity(self, _):
-#        pass
-#
-#    def set_current_position(self, position):
-#        self.current_position = position
-#
-#    def get_error(self):
-#        return utils.get_error(self.current_position, self.goal_position)
-#
-#    def get_next_motion_primitive(self):
-#        error = self.get_error()
-#
-#        if abs(error[5]) >= 0.07:
-#            if error[5] < 0:
-#                return [primitive for primitive in self.primitives if primitive.name == "+Yaw"][0]
-#
-#            return [primitive for primitive in self.primitives if primitive.name == "-Yaw"][0]
-#
-#        if abs(error[0]) < abs(error[1]):
-#            if error[1] < 0:
-#                return [primitive for primitive in self.primitives if primitive.name == "+Y"][0]
-#
-#            return [primitive for primitive in self.primitives if primitive.name == "-Y"][0]
-#
-#        # X axis
-#        if error[0] > 0:
-#            return [primitive for primitive in self.primitives if primitive.name == "+X"][0]
-#
-#        return [primitive for primitive in self.primitives if primitive.name == "-X"][0]
-#
-#    def get_next_rc_override(self):
-#        return self.get_next_motion_primitive().as_rc_override
+"""
+Motor locations:
+
+Top refers to motors facing up on top of bluerov
+Bottom (the ones facing inward on bottom)
+Front means towards the camera
+Left is to the left if you are looking at the back of the bluerov towards the camera (ie you are behind it)
+
+1: top back right
+2: bottom front right
+3: top front right
+4: top front left
+5: bottom front left
+6: top back left
+7: bottom back left
+8: bottom back right
+"""
 
 
 class PIDTracker(object):

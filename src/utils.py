@@ -195,3 +195,13 @@ def average_velocity(values_history, number_terms):
         total[j] = total[j] / float(number_terms)
 
     return total
+
+
+def terminate_if_unsafe(message, max_pwm, dry_run):
+    if any([abs(1500 - channel) > max_pwm for channel in message.channels]):
+        rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(message))
+
+        if not DRY_RUN:
+            set_motor_arming(False)
+
+        sys.exit(1)

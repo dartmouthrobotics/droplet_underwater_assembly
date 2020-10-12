@@ -19,23 +19,8 @@ import trajectory_tracker
 import assembly_action
 import config
 
-"""
-Motor locations:
+import build_platform
 
-Top refers to motors facing up on top of bluerov
-Bottom (the ones facing inward on bottom)
-Front means towards the camera
-Left is to the left if you are looking at the back of the bluerov towards the camera (ie you are behind it)
-
-1: top back right
-2: bottom front right
-3: top front right
-4: top front left
-5: bottom front left
-6: top back left
-7: bottom back left
-8: bottom back right
-"""
 
 """
 TODO:
@@ -85,92 +70,17 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     pitch_d=0.75,
 )
 
+BUILD_PLATFORM = build_platform.BuildPlatform(
+    pickup_dimensions=config.PICKUP_PLATFORM_DIMENSIONS,
+    drop_dimensions=config.DROP_PLATFORM_DIMENSIONS,
+    row_spacing=config.SLOT_Z_STRIDE,
+    column_spacing=config.SLOT_X_STRIDE,
+    min_pickup_slot=config.MIN_PICKUP_SLOT,
+    min_drop_slot=config.MIN_DROP_SLOT,
+    frame_id="/build_platform"
+)
 
-def construct_slot_matrix(min_slot, slot_x_stride, slot_z_stride, number_x_strides, number_z_strides):
-    slot_matrix = []
-    for row in range(number_z_strides):
-        current_row = []
-        for col in range(number_x_strides):
-            current_slot = list(min_slot)
-            current_slot[0] = current_slot[0] + slot_x_stride * col
-            current_slot[2] = current_slot[2] + row * slot_z_stride
-
-        slot_matrix.append(current_row)
-
-    return slot_matrix
-
-
-def get_actions_for_slot_pair(from_slot_low, to_slot_low):
-    from_slot_mid_low = list(from_slot)
-    from_slot_mid_low[2] = from_slot_mid_low[2] + config.MID_LOW_Z_OFFSET
-
-    from_slot_high = list(from_slot)
-    from_slot_high[2] = from_slot_high[2] + config.HIGH_Z_OFFSET
-
-    to_slot_mid_low = list(to_slot)
-    to_slot_mid_low[2] = to_slot_mid_low[2] + config.MID_LOW_Z_OFFSET
-
-    to_slot_high = list(to_slot)
-    to_slot_high[2] = to_slot_high[2] + config.HIGH_Z_OFFSET
-
-    return [
-        assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', from_slot_high, config.COARSE_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', from_slot_low, config.TIGHT_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('close_gripper', from_slot_low, config.TIGHT_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', from_slot_high, config.COARSE_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', to_slot_high, config.COARSE_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', to_slot_mid_low, config.TIGHT_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('open_gripper', to_slot_mid_low, config.TIGHT_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', to_slot_high, config.COARSE_POSE_TOLERANCE),
-        assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    ]
-
-#ACTIONS = [
-#    # 5 to 1
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_5_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#
-#    # 4 to 6
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_6_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#
-#    # 2 to 3
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#]
-
-for action in ACTIONS:
-    action.gripper_handler = GRIPPER_HANDLER
-
+ACTIONS = BUILD_PLATFORM.confvert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
 
 def imu_callback(imu_message):
     global latest_imu_message
@@ -200,36 +110,7 @@ def marker_callback(marker_message):
                 RAW_VELOCITY_HISTORY.append(LATEST_VELOCITY)
 
 
-def publish_platform_transforms(current_pose, marker_stamp, transform_broadcaster):
-    utils.send_transform_from_xyzrpy(
-       transform_broadcaster=transform_broadcaster,
-       xyzrpy=current_pose,
-       parent_frame=config.PLATFORM_FRAME_ID,
-       child_frame="/base_link",
-       stamp=marker_stamp
-    )
-
-    for slot in config.PLATFORM_SLOTS:
-        utils.send_transform_from_xyzrpy(
-            transform_broadcaster=transform_broadcaster,
-            xyzrpy=slot.location,
-            parent_frame=config.PLATFORM_FRAME_ID,
-            child_frame=slot.frame_id,
-            stamp=marker_stamp
-        )
-
-
-def check_message_safety(message, max_pwm):
-    if any([abs(1500 - channel) > max_pwm for channel in message.channels]):
-        rospy.logwarn("Too much pwm! Safety stopping on message: {}".format(message))
-
-        if not DRY_RUN:
-            set_motor_arming(False)
-
-        sys.exit(1)
-
-
-def run_binary_P_control_experiment(rc_override_publisher):
+def run_build_plan(rc_override_publisher):
     global latest_imu_message, VELOCITY_HISTORY, RUNNING_EXPERIMENT
 
     publish_rate = rospy.Rate(config.MAIN_LOOP_RATE)
@@ -245,7 +126,7 @@ def run_binary_P_control_experiment(rc_override_publisher):
     start_time = datetime.datetime.now()
     current_action = ACTIONS.pop(0)
 
-    while ((datetime.datetime.now() - start_time).total_seconds() < float(config.EXPERIMENT_DURATION_SECONDS)) and not rospy.is_shutdown():
+    while ((datetime.datetime.now() - start_time).total_seconds() < float(config.EXPERIMENT_MAX_DURATION_SECONDS)) and not rospy.is_shutdown():
         RUNNING_EXPERIMENT = True
         loop_start = rospy.Time.now()
 
@@ -273,13 +154,12 @@ def run_binary_P_control_experiment(rc_override_publisher):
         robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
         robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
 
-        #publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
+        BUILD_PLATFORM.publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
 
         TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
         TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
         pose_error = TRAJECTORY_TRACKER.get_error()
 
-        # act on the current action if it is not complete
         if not current_action.is_started:
             tolerance = config.TIGHT_POSE_TOLERANCE
             reached_goal = all([abs(error) < tol for (error, tol) in zip(pose_error, tolerance)])
@@ -325,7 +205,7 @@ def run_binary_P_control_experiment(rc_override_publisher):
         GRIPPER_HANDLER.update()
         GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
 
-        check_message_safety(go_message, 150)
+        utils.terminate_if_unsafe(go_message, 150, DRY_RUN)
         rc_override_publisher.publish(go_message)
 
         loop_end = rospy.Time.now()
@@ -395,14 +275,14 @@ def main():
         rospy.loginfo("Running in test mode.")
 
     rospy.loginfo("Running control test experiment for {time} seconds".format(
-        time=config.EXPERIMENT_DURATION_SECONDS
+        time=config.EXPERIMENT_MAX_DURATION_SECONDS
     ))
 
     rospy.loginfo("Waiting for enough marker data....")
     wait_for_marker_data()
     rospy.loginfo("Got marker data, going!!")
 
-    run_binary_P_control_experiment(
+    run_build_plan(
         rc_override_publisher
     )
 
