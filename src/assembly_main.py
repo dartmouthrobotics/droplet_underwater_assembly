@@ -80,7 +80,7 @@ BUILD_PLATFORM = build_platform.BuildPlatform(
     frame_id="/build_platform"
 )
 
-ACTIONS = BUILD_PLATFORM.confvert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
+ACTIONS = BUILD_PLATFORM.convert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
 
 def imu_callback(imu_message):
     global latest_imu_message
@@ -136,7 +136,7 @@ def run_build_plan(rc_override_publisher):
         goal_pose_publisher.publish(
             utils.pose_stamped_from_xyzrpy(
                 xyzrpy=current_action.goal_pose,
-                frame_id=config.PLATFORM_FRAME_ID,
+                frame_id=BUILD_PLATFORM.frame_id,
                 seq=0,
                 stamp=rospy.Time.now()
             )

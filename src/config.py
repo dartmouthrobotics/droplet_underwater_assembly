@@ -3,11 +3,14 @@ import collections
 BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot'])
 
 BUILD_PLAN = [
-    BuildStep(pickup_slot=(0,0), dropoff_slot=(0,0))
+    BuildStep(pickup_slot=(0,0), drop_slot=(0,0))
 ]
 
 PICKUP_PLATFORM_DIMENSIONS = [2, 2]
 DROP_PLATFORM_DIMENSIONS = [2, 3]
+
+MIN_PICKUP_SLOT = [-1.63, 0.46, -0.35, 0, 0, 0]
+MIN_DROP_SLOT = [-1.56, -0.135, -0.35, 0, 0, 0]
 
 TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.025, 0.025, 0.025, float("inf"), float("inf"), 0.018]
@@ -29,6 +32,9 @@ BLOCK_HELD_Y_I_GAIN = 0.1
 DEFAULT_X_I_GAIN = 0.05
 DEFAULT_Y_I_GAIN = 0.05
 DEFAULT_Z_I_GAIN = 0.05
+
+MID_LOW_Z_OFFSET = 0.12
+HIGH_Z_OFFSET = 0.22
 
 #ACTIONS = [
 #    # 5 to 1
