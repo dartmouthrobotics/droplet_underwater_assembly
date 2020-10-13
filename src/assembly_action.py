@@ -1,14 +1,17 @@
 import rospy
+import config
 
 class AssemblyAction(object):
-    def __init__(self, action_type, goal_pose, pose_tolerance):
+    def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0):
         self.valid_types = ['move', 'open_gripper', 'close_gripper']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
         self.reached_goal_time = None
-        self.position_hold_time = 6.0
-        self.gripper_hold_time = 2.5
+
+        self.position_hold_time = position_hold_time
+
+        self.gripper_hold_time = config.GRIPPER_HOLD_TIME
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
 

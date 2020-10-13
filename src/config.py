@@ -1,16 +1,18 @@
 import collections
 
+# TODO break down large moves
+
 BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot'])
 
 BUILD_PLAN = [
-    BuildStep(pickup_slot=(0,0), drop_slot=(0,0))
+    BuildStep(pickup_slot=(1,0), drop_slot=(0,10))
 ]
 
-PICKUP_PLATFORM_DIMENSIONS = [2, 2]
-DROP_PLATFORM_DIMENSIONS = [2, 3]
+PICKUP_PLATFORM_DIMENSIONS = [2, 9]
+DROP_PLATFORM_DIMENSIONS = [2, 11]
 
-MIN_PICKUP_SLOT = [-1.63, 0.46, -0.35, 0, 0, 0]
-MIN_DROP_SLOT = [-1.56, -0.135, -0.35, 0, 0, 0]
+MIN_PICKUP_SLOT = [-1.62, 0.48, -0.35, 0, 0, 0]
+MIN_DROP_SLOT = [-1.94, -0.125, -0.35, 0, 0, 0]
 
 TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.025, 0.025, 0.025, float("inf"), float("inf"), 0.018]
@@ -18,9 +20,9 @@ COARSE_POSE_TOLERANCE = [0.04, 0.04, 0.04, float("inf"), float("inf"), 0.05]
 
 MAIN_LOOP_RATE = 40
 
-CENTER_BACK_POSE =  [-1.89, 0.2, 0.08, -0.35, 0, 0]
+CENTER_BACK_POSE =  [-2.10, 0.2, 0.08, 0.0, 0, 0]
 
-SLOT_X_STRIDE = 0.08
+SLOT_X_STRIDE = 0.083
 SLOT_Z_STRIDE = 0.18
 
 EXPERIMENT_MAX_DURATION_SECONDS = 1200.0
@@ -35,6 +37,12 @@ DEFAULT_Z_I_GAIN = 0.05
 
 MID_LOW_Z_OFFSET = 0.12
 HIGH_Z_OFFSET = 0.22
+
+SLOW_MOVE_HOLD_TIME = 6.0
+RAPID_MOVE_HOLD_TIME = 4.0
+GRIPPER_HOLD_TIME = 2.5
+
+INTERMEDIATE_WAYPOINT_DISTANCE = 0.15
 
 #ACTIONS = [
 #    # 5 to 1

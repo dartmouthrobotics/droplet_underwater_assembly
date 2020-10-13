@@ -158,7 +158,7 @@ class PIDTracker(object):
         next_error = utils.get_error(next_position, self.goal_position)
         seconds_since_last_update = (rospy.Time.now() - self.last_position_update_time).to_sec()
 
-        for dimension in range(3):
+        for dimension in range(6):
             self.error_integral[dimension] = (next_error[dimension] * seconds_since_last_update) + self.error_integral[dimension]
 
 
@@ -193,7 +193,7 @@ class PIDTracker(object):
         return [
             error[0] * self.x_p + self.current_velocity[0] * self.x_d + self.error_integral[0] * self.x_i,
             error[1] * self.y_p + self.current_velocity[1] * self.y_d + self.error_integral[1] * self.y_i,
-            error[5] * self.yaw_p + self.current_velocity[5] * self.yaw_d
+            error[5] * self.yaw_p + self.current_velocity[5] * self.yaw_d + self.error_integral[5] * self.yaw_i
         ]
 
 

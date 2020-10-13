@@ -164,6 +164,7 @@ install(PROGRAMS
   src/config.py
   src/assembly_action.py
   src/trajectory_tracker.py
+  src/build_platform.py
   src/gripper_handler.py
   scripts/open_arm.sh
   scripts/close_arm.sh

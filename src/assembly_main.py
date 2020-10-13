@@ -58,7 +58,7 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     yaw_d=1.0,
     x_i=0.0,
     y_i=0.0,
-    yaw_i=0.0,
+    yaw_i=0.08,
     roll_p=-0.3,
     roll_i=0.0,
     roll_d=1.0,
@@ -81,6 +81,7 @@ BUILD_PLATFORM = build_platform.BuildPlatform(
 )
 
 ACTIONS = BUILD_PLATFORM.convert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
+
 
 def imu_callback(imu_message):
     global latest_imu_message
@@ -277,6 +278,14 @@ def main():
     rospy.loginfo("Running control test experiment for {time} seconds".format(
         time=config.EXPERIMENT_MAX_DURATION_SECONDS
     ))
+
+    rospy.loginfo("Running build plan:")
+    for idx, step in enumerate(config.BUILD_PLAN):
+        rospy.loginfo("    {}: {}".format(idx, step))
+
+    rospy.loginfo("Actions to complete:")
+    for idx, action in enumerate(ACTIONS):
+        rospy.loginfo("    {}: {}".format(idx, action))
 
     rospy.loginfo("Waiting for enough marker data....")
     wait_for_marker_data()
