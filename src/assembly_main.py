@@ -56,14 +56,14 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     x_d=-1.0, 
     y_d=-0.25,
     yaw_d=1.0,
-    x_i=0.0,
-    y_i=0.0,
+    x_i=config.DEFAULT_X_I_GAIN,
+    y_i=config.DEFAULT_Y_I_GAIN,
     yaw_i=0.08,
     roll_p=-0.3,
     roll_i=0.0,
     roll_d=1.0,
     z_p=3.5,
-    z_i=0.0,
+    z_i=config.DEFAULT_Z_I_GAIN,
     z_d=-0.50,
     pitch_p=-1.0,
     pitch_i=0.0,
@@ -155,7 +155,7 @@ def run_build_plan(rc_override_publisher):
         robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
         robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
 
-        BUILD_PLATFORM.publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
+        #BUILD_PLATFORM.publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
 
         TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
         TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
@@ -212,7 +212,7 @@ def run_build_plan(rc_override_publisher):
         loop_end = rospy.Time.now()
         loop_time = (loop_end - loop_start).to_sec()
         if (loop_time > 0.03):
-            rospy.logwarn("Slow loop!")
+            rospy.logwarn("Slow loop! {}".format(loop_time))
 
         publish_rate.sleep()
 

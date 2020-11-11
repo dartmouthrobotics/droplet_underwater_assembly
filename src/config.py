@@ -4,45 +4,83 @@ import collections
 
 BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot'])
 
+# staggered 8-block build
+#BUILD_PLAN = [
+#    BuildStep(pickup_slot=(2,0), drop_slot=(0,10)),
+#    BuildStep(pickup_slot=(2,4), drop_slot=(0,5)),
+#    BuildStep(pickup_slot=(1,0), drop_slot=(0,0)),
+#    BuildStep(pickup_slot=(1,4), drop_slot=(1,11)),
+#    BuildStep(pickup_slot=(1,8), drop_slot=(1,6)),
+#    BuildStep(pickup_slot=(0,0), drop_slot=(1,1)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(2,6)),
+#    BuildStep(pickup_slot=(0,8), drop_slot=(2,1)),
+#
+#]
+
+# 6 block pyramid
 BUILD_PLAN = [
-    BuildStep(pickup_slot=(1,0), drop_slot=(0,10))
+    BuildStep(pickup_slot=(2,0), drop_slot=(0,10)),
+    BuildStep(pickup_slot=(2,4), drop_slot=(0,5)),
+    BuildStep(pickup_slot=(1,0), drop_slot=(0,0)),
+    BuildStep(pickup_slot=(1,4), drop_slot=(1,7)),
+    BuildStep(pickup_slot=(1,8), drop_slot=(1,2)),
+    BuildStep(pickup_slot=(0,0), drop_slot=(2,4)),
 ]
 
-PICKUP_PLATFORM_DIMENSIONS = [2, 9]
-DROP_PLATFORM_DIMENSIONS = [2, 11]
+# 10 block repeatability 
+#BUILD_PLAN = [
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
+#]
 
-MIN_PICKUP_SLOT = [-1.62, 0.48, -0.35, 0, 0, 0]
-MIN_DROP_SLOT = [-1.94, -0.125, -0.35, 0, 0, 0]
+PICKUP_PLATFORM_DIMENSIONS = [4, 12]
+DROP_PLATFORM_DIMENSIONS = [4, 15]
+
+MIN_PICKUP_SLOT = [-1.94, 0.42, -0.35, 0, 0, 0]
+MIN_DROP_SLOT = [-1.94, -0.115, -0.35, 0, 0, 0]
 
 TRACKED_MARKER_ID = 0
-TIGHT_POSE_TOLERANCE = [0.025, 0.025, 0.025, float("inf"), float("inf"), 0.018]
+TIGHT_POSE_TOLERANCE = [0.025, 0.025, 0.035, float("inf"), float("inf"), 0.018]
 COARSE_POSE_TOLERANCE = [0.04, 0.04, 0.04, float("inf"), float("inf"), 0.05]
+ULTRA_COARSE_POSE_TOLERANCE = [0.10, 0.10, 0.10, float("inf"), float("inf"), 0.08]
 
 MAIN_LOOP_RATE = 40
 
-CENTER_BACK_POSE =  [-2.10, 0.2, 0.08, 0.0, 0, 0]
+# for deep end
+CENTER_BACK_POSE =  [-2.20, 0.15, 0.28, 0.0, 0, 0]
+
+# for shallow end
+#CENTER_BACK_POSE =  [-2.20, 0.15, 0.12, 0.0, 0, 0]
 
 SLOT_X_STRIDE = 0.083
-SLOT_Z_STRIDE = 0.18
+SLOT_Z_STRIDE = 0.19
 
-EXPERIMENT_MAX_DURATION_SECONDS = 1200.0
+EXPERIMENT_MAX_DURATION_SECONDS = 3000.0
 
 BLOCK_HELD_Z_I_GAIN = 0.15
-BLOCK_HELD_X_I_GAIN = 0.1
-BLOCK_HELD_Y_I_GAIN = 0.1
+BLOCK_HELD_X_I_GAIN = 0.15
+BLOCK_HELD_Y_I_GAIN = 0.15
 
-DEFAULT_X_I_GAIN = 0.05
-DEFAULT_Y_I_GAIN = 0.05
-DEFAULT_Z_I_GAIN = 0.05
+DEFAULT_X_I_GAIN = 0.10
+DEFAULT_Y_I_GAIN = 0.10
+DEFAULT_Z_I_GAIN = 0.10
 
 MID_LOW_Z_OFFSET = 0.12
-HIGH_Z_OFFSET = 0.22
+HIGH_Z_OFFSET = 0.15
 
 SLOW_MOVE_HOLD_TIME = 6.0
-RAPID_MOVE_HOLD_TIME = 4.0
+RAPID_MOVE_HOLD_TIME = 3.0
 GRIPPER_HOLD_TIME = 2.5
 
-INTERMEDIATE_WAYPOINT_DISTANCE = 0.15
+INTERMEDIATE_WAYPOINT_DISTANCE = 0.25
 
 #ACTIONS = [
 #    # 5 to 1
