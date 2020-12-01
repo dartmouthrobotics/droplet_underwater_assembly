@@ -29,12 +29,15 @@ VELOCITY_HISTORY = []
 DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
+IS_USING_OPEN_LOOP_CONTROL = False
+
+LAST_TRACKED_MARKER_TIME = None
 
 latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
 
-TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
+pid_gains_dict = dict(
     x_p=4.00,
     y_p=4.00,
     yaw_p=2.35, 
@@ -53,7 +56,17 @@ TRAJECTORY_TRACKER = trajectory_tracker.PIDTracker(
     pitch_p=-1.0,
     pitch_i=0.0,
     pitch_d=0.75,
+) 
+
+CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
+    **gains_dict
 )
+
+OPEN_LOOP_TRACKER = trajectory_tracker.OpenLoopTracker(
+    **gains_dict
+)
+
+TRAJECTORY_TRACKER = CLOSED_LOOP_TRACKER
 
 BUILD_PLATFORM = build_platform.BuildPlatform(
     pickup_dimensions=config.PICKUP_PLATFORM_DIMENSIONS,
@@ -83,6 +96,8 @@ def marker_callback(marker_message):
 
     for marker in marker_message.markers:
         if marker.id == config.TRACKED_MARKER_ID:
+            LAST_TRACKED_MARKER_TIME = marker_message.header.stamp
+
             if LATEST_MARKER_MESSAGE is not None:
                 current_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(marker))
                 distance_travelled = utils.get_error(last_marker_pose, current_marker_pose)
@@ -98,7 +113,104 @@ def marker_callback(marker_message):
             if latest_imu_message is not None:
                 robot_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
                 BUILD_PLATFORM.update_platform_roll_pitch_estimate(robot_pose, latest_imu_message)
-                
+
+
+def get_latest_velocity_xyzrpy():
+    latest_vel_avg = utils.average_velocity(VELOCITY_HISTORY, 2)
+
+    if latest_imu_message is None:
+        return [latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, 0.0]
+
+    return [latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, -latest_imu_message.angular_velocity.z]
+
+def get_robot_pose_xyzrpy():
+    robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
+    robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
+    
+    return robot_pose_xyzrpy
+
+
+def update_closed_loop_controller():
+        TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
+        goal_pose_publisher.publish(
+            utils.pose_stamped_from_xyzrpy(
+                xyzrpy=current_action.goal_pose,
+                frame_id=BUILD_PLATFORM.frame_id,
+                seq=0,
+                stamp=rospy.Time.now()
+            )
+        )
+
+        latest_vel_avg = get_latest_velocity_xyzrpy()
+
+        VELOCITY_HISTORY.append(LATEST_VELOCITY)
+        
+        latest_vel_avg = get_latest_velocity_xyzrpy()
+        robot_pose_xyzrpy = get_robot_pose_xyzrpy()
+
+        TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
+        TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
+        TRAJECTORY_TRACKER.set_current_velocity(latest_vel_avg)
+
+
+def update_open_loop_controller():
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+    robot_pose_xyzrpy = get_robot_pose_xyzrpy()
+
+    OPEN_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
+    OPEN_LOOP_TRACKER.set_current_position(robot_pose_xyzrpy)
+    OPEN_LOOP_TRACKER.set_current_velocity(latest_vel_avg)
+
+# how do we want to decide when the open loop controller should stop?
+
+def act_on_current_action(current_action):
+    global IS_USING_OPEN_LOOP_CONTROL
+
+    if not current_action.is_started:
+        tolerance = config.TIGHT_POSE_TOLERANCE
+        reached_goal = all([abs(error) < tol for (error, tol) in zip(pose_error, tolerance)])
+
+        if current_action.action_type == 'open_gripper':
+            if reached_goal:
+                GRIPPER_HANDLER.start_opening()
+                current_action.start()
+                TRAJECTORY_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
+                TRAJECTORY_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
+                TRAJECTORY_TRACKER.x_i = config.DEFAULT_X_I_GAIN
+                TRAJECTORY_TRACKER.clear_error_integrals()
+
+        elif current_action.action_type == 'close_gripper':
+            if reached_goal:
+                GRIPPER_HANDLER.start_closing()
+                current_action.start()
+                TRAJECTORY_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
+                TRAJECTORY_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
+                TRAJECTORY_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
+                TRAJECTORY_TRACKER.clear_error_integrals()
+
+        elif current_action.action_type == 'change_platforms':
+            TRACKED_MARKER_ID = current_action.to_platform_id
+            IS_USING_OPEN_LOOP_CONTROL = True
+            current_action.start()
+        else:
+            current_action.start()
+
+        if current_action.is_started:
+            rospy.loginfo("Starting action: {}".format(current_action))
+
+        if current_action.action_type != 'change_platforms':
+            IS_USING_OPEN_LOOP_CONTROL = False
+    else:
+        if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
+            rospy.loginfo("Completed action: {}. Error: {}".format(current_action, pose_error))
+
+            if len(ACTIONS) > 0:
+                return ACTIONS.pop(0)
+
+    if goal_not_reached and current_action.reached_goal_time is not None:
+        rospy.loginfo("Reached goal position. Holding.")
+
+    return current_action
 
 
 def run_build_plan(rc_override_publisher):
@@ -121,77 +233,21 @@ def run_build_plan(rc_override_publisher):
         RUNNING_EXPERIMENT = True
         loop_start = rospy.Time.now()
 
+        update_controller()
+
         goal_not_reached = current_action.reached_goal_time is None
-
-        TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
-        goal_pose_publisher.publish(
-            utils.pose_stamped_from_xyzrpy(
-                xyzrpy=current_action.goal_pose,
-                frame_id=BUILD_PLATFORM.frame_id,
-                seq=0,
-                stamp=rospy.Time.now()
-            )
-        )
-
-        VELOCITY_HISTORY.append(LATEST_VELOCITY)
-        
-        latest_vel_avg = utils.average_velocity(VELOCITY_HISTORY, 2)
-
-        if latest_imu_message is None:
-            TRAJECTORY_TRACKER.set_current_velocity([latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, 0.0])
-        else:
-            TRAJECTORY_TRACKER.set_current_velocity([latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, -latest_imu_message.angular_velocity.z])
-
-        robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
-        robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
-
-        #BUILD_PLATFORM.publish_platform_transforms(robot_pose_xyzrpy, LATEST_MARKER_MESSAGE.header.stamp, transform_broadcaster)
-
-        TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
-        TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
         pose_error = TRAJECTORY_TRACKER.get_error()
 
-        if not current_action.is_started:
-            tolerance = config.TIGHT_POSE_TOLERANCE
-            reached_goal = all([abs(error) < tol for (error, tol) in zip(pose_error, tolerance)])
+        current_action = act_on_current_action(current_action, pose_error)
 
-            if current_action.action_type == 'open_gripper':
-                if reached_goal:
-                    GRIPPER_HANDLER.start_opening()
-                    current_action.start()
-                    TRAJECTORY_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
-                    TRAJECTORY_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
-                    TRAJECTORY_TRACKER.x_i = config.DEFAULT_X_I_GAIN
-                    TRAJECTORY_TRACKER.clear_error_integrals()
-
-            elif current_action.action_type == 'close_gripper':
-                if reached_goal:
-                    GRIPPER_HANDLER.start_closing()
-                    current_action.start()
-                    TRAJECTORY_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
-                    TRAJECTORY_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
-                    TRAJECTORY_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
-                    TRAJECTORY_TRACKER.clear_error_integrals()
-            else:
-                current_action.start()
-
-            if current_action.is_started:
-                rospy.loginfo("Starting action: {}".format(current_action))
-        else:
-            if current_action.is_complete(pose_error):
-                rospy.loginfo("Completed action: {}. Error: {}".format(current_action, pose_error))
-
-                if len(ACTIONS) > 0:
-                    current_action = ACTIONS.pop(0)
-
-        if current_action.is_started and current_action.is_complete(pose_error) and len(ACTIONS) == 0:
+        if current_action.is_started and current_action.is_complete(pose_error, LAST_TRACKED_MARKER_TIME) and len(ACTIONS) == 0:
             rospy.loginfo("Completed all actions! Terminating")
             break
 
-        if goal_not_reached and current_action.reached_goal_time is not None:
-            rospy.loginfo("Reached goal position. Holding.")
-
-        go_message = TRAJECTORY_TRACKER.get_next_rc_override()
+        if IS_USING_OPEN_LOOP_CONTROL:
+            go_message = OPEN_LOOP_TRACKER.get_next_rc_override()
+        else:
+            go_message = TRAJECTORY_TRACKER.get_next_rc_override()
 
         GRIPPER_HANDLER.update()
         GRIPPER_HANDLER.mix_into_rc_override_message(go_message)

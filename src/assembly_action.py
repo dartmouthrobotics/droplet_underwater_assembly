@@ -2,8 +2,8 @@ import rospy
 import config
 
 class AssemblyAction(object):
-    def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist']
+    def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0, **kwargs):
+        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
@@ -14,6 +14,13 @@ class AssemblyAction(object):
         self.gripper_hold_time = config.GRIPPER_HOLD_TIME
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
+
+        if 'to_platform_id' in kwargs:
+            self.to_platform_id = kwargs['to_platform_id']
+
+        else:
+            if self.action_type == 'change_platforms':
+                raise Exception("Destination platform must be provided for the change platforms action")
 
         assert(self.action_type in self.valid_types)
         assert(len(self.goal_pose) == 6)
@@ -32,7 +39,7 @@ class AssemblyAction(object):
     def is_started(self):
         return self.start_time is not None
 
-    def is_complete(self, pose_error):
+    def is_complete(self, pose_error, **kwargs):
         if self.start_time is None:
             rospy.logerr("Cannot complete an action that hasn't been started.")
             return False
@@ -53,5 +60,8 @@ class AssemblyAction(object):
             complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
 
             return complete
+
+        if self.action_type == 'change_platforms':
+            return (rospy.Time.now() - kwargs['last_tracked_marker_time']).to_sec() < 0.5
 
         raise Exception("Unrecognized action type!")

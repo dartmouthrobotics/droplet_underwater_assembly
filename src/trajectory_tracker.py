@@ -255,3 +255,56 @@ class PIDTracker(object):
             assert((abs(speed) - 1500) <= 150)
 
         return utils.construct_rc_message(motor_speeds)
+
+
+class OpenLoopTracker(PIDTracker):
+    # we want to move to another tag, so what does that look like?
+    def init(self, **kwargs):
+        super(OpenLoopTracker, self).init(
+            **kwargs
+        )
+
+        self.pulse_on_z_thrust = 0.5
+        self.pulse_on_yaw_thrust = 0.5
+
+        self.on_time_ratio = 0.6
+        self.cycle_time = 6.0
+        self.cycle_start_time = None
+
+    def cycle_is_complete(self):
+        if cycle is None:
+            return True
+
+        return (rospy.Time.now() - self.cycle_start_time).to_sec() > self.cycle_time
+
+    def should_be_on(self):
+        if self.cycle_start_time is None:
+            return False
+
+        current_cycle_time = (rospy.Time.now() - self.cycle_start_time).to_sec()
+
+        return current_cycle_time < self.on_time_ratio * self.cycle_time
+
+    def get_next_rc_override(self):
+        zrp_thrusts = self.get_zrp_thrust_vector()
+        xyyaw_thrusts = [0.0, 0.0, 0.0]
+
+        if not self.cycle_is_complete():
+            self.cycle_start_time = rospy.Time.now()
+
+        if self.should_be_on():
+            zrp_thrusts[0] = self.pulse_on_z_thrust
+        else:
+            xyyaw_thrusts[2] = self.pulse_on_yaw_thrust
+
+        thrust_vector = xyyaw_thrusts + zrp_thrusts
+        motor_intensities = self.convert_thrust_vector_to_motor_intensities(thrust_vector)
+
+        motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
+
+        for speed in motor_speeds:
+            assert((abs(speed) - 1500) <= 150)
+
+        return utils.construct_rc_message(motor_speeds)
+        # we want to maintain the roll, yaw correction since we get that every frame easily
+        # lets try pulsing up and to the left
