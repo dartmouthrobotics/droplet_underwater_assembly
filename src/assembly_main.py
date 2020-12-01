@@ -22,21 +22,6 @@ import config
 import build_platform
 
 
-"""
-TODO:
-    * Handling of non-level build platforms
-    Handling (more gracefully) of more slots on the platform
-"""
-
-"""
-To handle a non-level build platform, what can we start with? Lets get a bag file (after fixing the hand, maybe on Sunday.)
-The way that the non-level platform would work is that we compute the platform's roll and pitch in world frame based on the imu's orientation and each tag reading.
-
-How can we do this? I guess a running average would be the best since it should never change.
-How does it influence the things we tell the robot to do?
-"""
-
-
 LATEST_MARKER_MESSAGE = None
 RAW_VELOCITY_HISTORY = []
 RUNNING_EXPERIMENT = False
@@ -109,6 +94,11 @@ def marker_callback(marker_message):
 
             if RUNNING_EXPERIMENT:
                 RAW_VELOCITY_HISTORY.append(LATEST_VELOCITY)
+
+            if latest_imu_message is not None:
+                robot_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
+                BUILD_PLATFORM.update_platform_roll_pitch_estimate(robot_pose, latest_imu_message)
+                
 
 
 def run_build_plan(rc_override_publisher):
@@ -240,27 +230,27 @@ def main():
     rospy.init_node("binary_pid_control")
 
     marker_subscriber = rospy.Subscriber(
-        "/bluerov_controller/ar_tag_detector",
+        config.AR_MARKER_TOPIC,
         stag_ros.msg.StagMarkers,
         marker_callback,
         queue_size=1
     )
 
     imu_subscriber = rospy.Subscriber(
-        "/imu/data",
+        config.IMU_TOPIC,
         sensor_msgs.msg.Imu,
         imu_callback,
         queue_size=1
     )
 
     rc_override_publisher = rospy.Publisher(
-        "/mavros/rc/override",
+        config.RC_OVERRIDE_TOPIC,
         mavros_msgs.msg.OverrideRCIn,
         queue_size=1
     )
 
     goal_pose_publisher = rospy.Publisher(
-        "/goal_pose",
+        config.GOAL_POSE_TOPIC,
         geometry_msgs.msg.PoseStamped,
         queue_size=1
     )

@@ -1,5 +1,7 @@
 import utils
 import rospy
+import mavros_msgs.srv
+import config
 
 class GripperHandler(object):
     def __init__(self):
@@ -7,11 +9,21 @@ class GripperHandler(object):
         self.channel = 8
         self.toggle_pwm = 50
         self.close_time_addon = 0.5
+        self.rotation_rate = 1 # 1 pwm per frame
 
         self.toggle_start_time = None
 
         # zero means not moving, less than zero means closing, more than zero means opening.
         self.move_direction = 0
+
+        # gripper starts aligned with robot body
+        self.current_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
+        self.desired_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
+
+        self.gripper_rotation_service_proxy = rospy.ServiceProxy("/mavros/cmd/command", mavros_msgs.srv.CommandLong)
+
+    def rotate_to_position(self, rotation_position):
+        self.desired_rotation_position = rotation_position
 
     @property
     def is_toggling(self):
@@ -51,6 +63,24 @@ class GripperHandler(object):
             rospy.loginfo("Completed moving gripper.")
             self.move_direction = 0
             self.toggle_start_time = None
+
+        #if self.desired_rotation_position is not None:
+        #    if self.desired_rotation_position < self.current_rotation_position:
+        #        self.current_rotation_position = self.current_rotation_position - 1
+        #        self.publish_gripper_rotation_position(self.current_rotation_position)
+
+        #    elif self.desired_rotation_position > self.current_rotation_position:
+        #        self.current_rotation_position = self.current_rotation_position + 1
+        #        self.publish_gripper_rotation_position(self.current_rotation_position)
+
+    def publish_gripper_rotation_position(self, position):
+        self.gripper_rotation_service_proxy(
+            broadcast=False,
+            command=183,
+            confirmation=0,
+            param1=0,
+            param2=self.current_rotation_position
+        )
 
     def start_opening(self):
         if self.is_toggling:

@@ -3,7 +3,7 @@ import config
 
 class AssemblyAction(object):
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper']
+        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None

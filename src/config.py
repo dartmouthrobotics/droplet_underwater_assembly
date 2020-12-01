@@ -1,8 +1,36 @@
 import collections
 
-# TODO break down large moves
+#IMU_TOPIC = "/imu/data"
+IMU_TOPIC = "/imu/data"
+RC_OVERRIDE_TOPIC = "/mavros/rc/override"
+GOAL_POSE_TOPIC = "/goal_pose"
+AR_MARKER_TOPIC = "/bluerov_controller/ar_tag_detector"
 
-BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot'])
+# right angle to robot body
+GRIPPER_ROTATION_RIGHT_ANGLE = 1230
+
+# aligned with robot body
+GRIPPER_ROTATION_ALIGNED_BODY = 1500
+
+BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot', 'pickup_wrist_pwm', 'drop_wrist_pwm'])
+
+# what is the algo for the open loop process. Pulse up and to the right on and off at a given pace. Can we do closed loop control when we are 20ft from the tag?
+
+# the thing we need to do is set up a way to test different strategies.
+# what is the skeleton of these strategies?
+# we start out in closed loop control, we flip over to open loop, we then flip back
+# to closed loop control 
+
+# the questions are:
+# how do we know when we should flip back into closed loop control
+# what should we have the robot do when it is in open loop control
+
+# what does a program for testing this look like?
+#    I think it can fit into the flow we have now. We just need some logic for a new type
+#    of trajectory tracker
+#
+#    maybe we could have a CLOSED_LOOP_TRACKER 
+# how does it integrate into the larger system as a whole?
 
 # staggered 8-block build
 #BUILD_PLAN = [
@@ -18,14 +46,14 @@ BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot'])
 #]
 
 # 6 block pyramid
-BUILD_PLAN = [
-    BuildStep(pickup_slot=(2,0), drop_slot=(0,10)),
-    BuildStep(pickup_slot=(2,4), drop_slot=(0,5)),
-    BuildStep(pickup_slot=(1,0), drop_slot=(0,0)),
-    BuildStep(pickup_slot=(1,4), drop_slot=(1,7)),
-    BuildStep(pickup_slot=(1,8), drop_slot=(1,2)),
-    BuildStep(pickup_slot=(0,0), drop_slot=(2,4)),
-]
+#BUILD_PLAN = [
+#    BuildStep(pickup_slot=(2,0), drop_slot=(0,10)),
+#    BuildStep(pickup_slot=(2,4), drop_slot=(0,5)),
+#    BuildStep(pickup_slot=(1,0), drop_slot=(0,0)),
+#    BuildStep(pickup_slot=(1,4), drop_slot=(1,7)),
+#    BuildStep(pickup_slot=(1,8), drop_slot=(1,2)),
+#    BuildStep(pickup_slot=(0,0), drop_slot=(2,4)),
+#]
 
 # 10 block repeatability 
 #BUILD_PLAN = [
@@ -122,44 +150,3 @@ INTERMEDIATE_WAYPOINT_DISTANCE = 0.25
 #    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
 #    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
 #]
-
-# right bottom back
-#OVER_BLOCK_1_POSE_LOW = [-1.15, -0.135, -0.35, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_1_POSE_MID_LOW = [-1.15, -0.135, -0.20, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_1_POSE_HIGH = [-1.15, -0.135, -0.10, 0, 0, 0] # for after grabbing
-#
-## left bottom back
-#OVER_BLOCK_2_POSE_LOW = [-1.30, 0.46, -0.32, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_2_POSE_MID_LOW = [-1.30, 0.46, -0.20, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_2_POSE_HIGH = [-1.30, 0.46, -0.10, 0, 0, 0] # for after grabbing
-#
-## right top
-#OVER_BLOCK_3_POSE_LOW = list(OVER_BLOCK_1_POSE_LOW)
-##OVER_BLOCK_3_POSE_MID_LOW = list(OVER_BLOCK_1_POSE_MID_LOW)
-##OVER_BLOCK_3_POSE_HIGH = list(OVER_BLOCK_1_POSE_HIGH)
-## right top
-#OVER_BLOCK_3_POSE_LOW[2] = OVER_BLOCK_1_POSE_LOW[2] + 0.18
-##OVER_BLOCK_3_POSE_MID_LOW[2] = OVER_BLOCK_1_POSE_MID_LOW[2] + 0.18
-##OVER_BLOCK_3_POSE_HIGH[2] = OVER_BLOCK_1_POSE_HIGH[2] + 0.18
-#OVER_BLOCK_3_POSE_LOW[0] = OVER_BLOCK_1_POSE_LOW[0] - 0.16
-##OVER_BLOCK_3_POSE_MID_LOW[0] = OVER_BLOCK_1_POSE_MID_LOW[0] - 0.16
-##OVER_BLOCK_3_POSE_HIGH[0] = OVER_BLOCK_1_POSE_HIGH[0] - 0.16
-#
-## left top
-#OVER_BLOCK_4_POSE_LOW = list(OVER_BLOCK_2_POSE_LOW)
-##OVER_BLOCK_4_POSE_MID_LOW = list(OVER_BLOCK_2_POSE_MID_LOW)
-##OVER_BLOCK_4_POSE_HIGH = list(OVER_BLOCK_2_POSE_HIGH)
-## left top
-##OVER_BLOCK_4_POSE_LOW[2] = OVER_BLOCK_2_POSE_LOW[2] + 0.18
-##OVER_BLOCK_4_POSE_MID_LOW[2] = OVER_BLOCK_2_POSE_MID_LOW[2] + 0.18
-##OVER_BLOCK_4_POSE_HIGH[2] = OVER_BLOCK_2_POSE_HIGH[2] + 0.18
-##
-### left front
-##OVER_BLOCK_5_POSE_LOW = [-1.63, 0.46, -0.32, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_5_POSE_MID_LOW = [-1.63, 0.46, -0.20, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_5_POSE_HIGH = [-1.63, 0.46, -0.10, 0, 0, 0] # for after grabbing
-##
-### right bottom front
-##OVER_BLOCK_6_POSE_LOW = [-1.56, -0.135, -0.35, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_6_POSE_MID_LOW = [-1.56, -0.135, -0.20, 0, 0, 0] # for before grabbing
-##OVER_BLOCK_6_POSE_HIGH = [-1.56, -0.135, -0.10, 0, 0, 0] # for after grabbing
