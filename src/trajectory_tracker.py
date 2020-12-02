@@ -101,6 +101,8 @@ class PIDTracker(object):
         self.last_position_update_time = None
         self.latest_imu_reading = None
 
+        self.goal_position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
 
     def convert_thrust_vector_to_motor_intensities(self, thrust_vector):
         # thrust vector is: x,y,yaw,z,roll,pitch
@@ -259,20 +261,19 @@ class PIDTracker(object):
 
 class OpenLoopTracker(PIDTracker):
     # we want to move to another tag, so what does that look like?
-    def init(self, **kwargs):
-        super(OpenLoopTracker, self).init(
+    def __init__(self, **kwargs):
+        super(OpenLoopTracker, self).__init__(
             **kwargs
         )
-
         self.pulse_on_z_thrust = 0.5
         self.pulse_on_yaw_thrust = 0.5
 
         self.on_time_ratio = 0.6
-        self.cycle_time = 6.0
+        self.cycle_time = 2.0
         self.cycle_start_time = None
 
     def cycle_is_complete(self):
-        if cycle is None:
+        if self.cycle_start_time is None:
             return True
 
         return (rospy.Time.now() - self.cycle_start_time).to_sec() > self.cycle_time
@@ -286,18 +287,19 @@ class OpenLoopTracker(PIDTracker):
         return current_cycle_time < self.on_time_ratio * self.cycle_time
 
     def get_next_rc_override(self):
-        zrp_thrusts = self.get_zrp_thrust_vector()
+        #zrp_thrusts = self.get_zrp_thrust_vector()
+        zrp_thrusts = [0.0, 0.0, 0.0]
         xyyaw_thrusts = [0.0, 0.0, 0.0]
 
-        if not self.cycle_is_complete():
+        if self.cycle_is_complete():
             self.cycle_start_time = rospy.Time.now()
 
         if self.should_be_on():
             zrp_thrusts[0] = self.pulse_on_z_thrust
-        else:
             xyyaw_thrusts[2] = self.pulse_on_yaw_thrust
 
         thrust_vector = xyyaw_thrusts + zrp_thrusts
+
         motor_intensities = self.convert_thrust_vector_to_motor_intensities(thrust_vector)
 
         motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)

@@ -17,8 +17,8 @@ class GripperHandler(object):
         self.move_direction = 0
 
         # gripper starts aligned with robot body
-        self.current_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
-        self.desired_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
+        #self.current_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
+        #self.desired_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
 
         self.gripper_rotation_service_proxy = rospy.ServiceProxy("/mavros/cmd/command", mavros_msgs.srv.CommandLong)
 

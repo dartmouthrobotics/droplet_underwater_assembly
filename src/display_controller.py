@@ -1,4 +1,5 @@
 import rospy
+import serial
 
 class DisplayController(object):
     def __init__(self, serial_port, baudrate):
@@ -22,7 +23,7 @@ class DisplayController(object):
 
 
     def update_lcd_display(self, line_1, line_2):
-        valid = self.check_lcd_line(line_1) && self.check_lcd_line(line_2)
+        valid = self.check_lcd_line(line_1) and self.check_lcd_line(line_2)
 
         if not valid:
             return

@@ -23,12 +23,17 @@ class AssemblyAction(object):
                 raise Exception("Destination platform must be provided for the change platforms action")
 
         assert(self.action_type in self.valid_types)
-        assert(len(self.goal_pose) == 6)
+
+        if self.action_type != 'change_platforms':
+            assert(len(self.goal_pose) == 6)
 
     def __str__(self):
         if self.action_type == "open_gripper" or self.action_type == "close_gripper":
 
             return "Action type: {}".format(self.action_type)
+
+        if self.action_type == "change_platforms":
+            return "Changing to platform {}".format(self.to_platform_id)
 
         return "Move to: {}".format(self.goal_pose)
 
@@ -62,6 +67,6 @@ class AssemblyAction(object):
             return complete
 
         if self.action_type == 'change_platforms':
-            return (rospy.Time.now() - kwargs['last_tracked_marker_time']).to_sec() < 0.5
+            return kwargs['last_tracked_marker_time'] is not None and (rospy.Time.now() - kwargs['last_tracked_marker_time']).to_sec() < 0.5
 
         raise Exception("Unrecognized action type!")

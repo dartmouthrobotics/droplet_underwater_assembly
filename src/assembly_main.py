@@ -18,6 +18,7 @@ import gripper_handler
 import trajectory_tracker
 import assembly_action
 import config
+import display_controller
 
 import build_platform
 
@@ -31,11 +32,18 @@ TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
 IS_USING_OPEN_LOOP_CONTROL = False
 
+DISPLAY = None
+try:
+    DISPLAY = display_controller.DisplayController("/dev/ttyUSB0", 9600)
+except:
+    rospy.logerr("Unable to connect to display controller!")
+
 LAST_TRACKED_MARKER_TIME = None
 
 latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
+
 
 pid_gains_dict = dict(
     x_p=4.00,
@@ -59,11 +67,11 @@ pid_gains_dict = dict(
 ) 
 
 CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
-    **gains_dict
+    **pid_gains_dict
 )
 
 OPEN_LOOP_TRACKER = trajectory_tracker.OpenLoopTracker(
-    **gains_dict
+    **pid_gains_dict
 )
 
 TRAJECTORY_TRACKER = CLOSED_LOOP_TRACKER
@@ -78,7 +86,15 @@ BUILD_PLATFORM = build_platform.BuildPlatform(
     frame_id="/build_platform"
 )
 
-ACTIONS = BUILD_PLATFORM.convert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
+# gonna need many build platforms. Maybe I can wait on that?
+
+#ACTIONS = BUILD_PLATFORM.convert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
+
+ACTIONS = [
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
+    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE)
+]
 
 
 def imu_callback(imu_message):
@@ -89,26 +105,27 @@ def imu_callback(imu_message):
 
 
 def marker_callback(marker_message):
-    global LATEST_MARKER_MESSAGE, TIMES_TRACKED_MARKER_SEEN, LATEST_VELOCITY, RAW_VELOCITY_HISTORY
+    global LATEST_MARKER_MESSAGE, TIMES_TRACKED_MARKER_SEEN, LATEST_VELOCITY, RAW_VELOCITY_HISTORY, LAST_TRACKED_MARKER_TIME
 
     if LATEST_MARKER_MESSAGE is not None:
         last_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
 
     for marker in marker_message.markers:
         if marker.id == config.TRACKED_MARKER_ID:
-            LAST_TRACKED_MARKER_TIME = marker_message.header.stamp
+            #LAST_TRACKED_MARKER_TIME = marker_message.header.stamp
+            LAST_TRACKED_MARKER_TIME = rospy.Time.now()
+            print "marker {}".format(config.TRACKED_MARKER_ID)
 
             if LATEST_MARKER_MESSAGE is not None:
                 current_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(marker))
                 distance_travelled = utils.get_error(last_marker_pose, current_marker_pose)
                 time_delta_seconds = (marker.header.stamp - LATEST_MARKER_MESSAGE.header.stamp).to_sec()
                 LATEST_VELOCITY = [value / time_delta_seconds for value in distance_travelled]
+                RAW_VELOCITY_HISTORY.append(LATEST_VELOCITY)
 
             LATEST_MARKER_MESSAGE = marker
             TIMES_TRACKED_MARKER_SEEN = TIMES_TRACKED_MARKER_SEEN + 1
 
-            if RUNNING_EXPERIMENT:
-                RAW_VELOCITY_HISTORY.append(LATEST_VELOCITY)
 
             if latest_imu_message is not None:
                 robot_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
@@ -116,7 +133,7 @@ def marker_callback(marker_message):
 
 
 def get_latest_velocity_xyzrpy():
-    latest_vel_avg = utils.average_velocity(VELOCITY_HISTORY, 2)
+    latest_vel_avg = utils.average_velocity(RAW_VELOCITY_HISTORY, 2)
 
     if latest_imu_message is None:
         return [latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, 0.0]
@@ -130,7 +147,7 @@ def get_robot_pose_xyzrpy():
     return robot_pose_xyzrpy
 
 
-def update_closed_loop_controller():
+def update_closed_loop_controller(current_action):
         TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
         goal_pose_publisher.publish(
             utils.pose_stamped_from_xyzrpy(
@@ -153,18 +170,21 @@ def update_closed_loop_controller():
         TRAJECTORY_TRACKER.set_current_velocity(latest_vel_avg)
 
 
-def update_open_loop_controller():
+def update_open_loop_controller(current_action):
+    TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
     latest_vel_avg = get_latest_velocity_xyzrpy()
     robot_pose_xyzrpy = get_robot_pose_xyzrpy()
 
-    OPEN_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
     OPEN_LOOP_TRACKER.set_current_position(robot_pose_xyzrpy)
+    OPEN_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
     OPEN_LOOP_TRACKER.set_current_velocity(latest_vel_avg)
 
 # how do we want to decide when the open loop controller should stop?
 
-def act_on_current_action(current_action):
-    global IS_USING_OPEN_LOOP_CONTROL
+def act_on_current_action(current_action, pose_error):
+    global IS_USING_OPEN_LOOP_CONTROL, LAST_TRACKED_MARKER_TIME
+
+    goal_not_reached = current_action.reached_goal_time is None
 
     if not current_action.is_started:
         tolerance = config.TIGHT_POSE_TOLERANCE
@@ -189,8 +209,9 @@ def act_on_current_action(current_action):
                 TRAJECTORY_TRACKER.clear_error_integrals()
 
         elif current_action.action_type == 'change_platforms':
-            TRACKED_MARKER_ID = current_action.to_platform_id
+            config.TRACKED_MARKER_ID = current_action.to_platform_id
             IS_USING_OPEN_LOOP_CONTROL = True
+            LAST_TRACKED_MARKER_TIME = None
             current_action.start()
         else:
             current_action.start()
@@ -233,18 +254,24 @@ def run_build_plan(rc_override_publisher):
         RUNNING_EXPERIMENT = True
         loop_start = rospy.Time.now()
 
-        update_controller()
+        if current_action.action_type == "change_platforms":
+            update_open_loop_controller(current_action)
+        else:
+            update_closed_loop_controller(current_action)
 
         goal_not_reached = current_action.reached_goal_time is None
         pose_error = TRAJECTORY_TRACKER.get_error()
 
         current_action = act_on_current_action(current_action, pose_error)
 
-        if current_action.is_started and current_action.is_complete(pose_error, LAST_TRACKED_MARKER_TIME) and len(ACTIONS) == 0:
+        if current_action.action_type == "change_platforms":
+            update_open_loop_controller(current_action)
+
+        if current_action.is_started and current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME) and len(ACTIONS) == 0:
             rospy.loginfo("Completed all actions! Terminating")
             break
 
-        if IS_USING_OPEN_LOOP_CONTROL:
+        if  current_action.action_type == "change_platforms":
             go_message = OPEN_LOOP_TRACKER.get_next_rc_override()
         else:
             go_message = TRAJECTORY_TRACKER.get_next_rc_override()
@@ -325,9 +352,9 @@ def main():
         time=config.EXPERIMENT_MAX_DURATION_SECONDS
     ))
 
-    rospy.loginfo("Running build plan:")
-    for idx, step in enumerate(config.BUILD_PLAN):
-        rospy.loginfo("    {}: {}".format(idx, step))
+    #rospy.loginfo("Running build plan:")
+    #for idx, step in enumerate(config.BUILD_PLAN):
+    #    rospy.loginfo("    {}: {}".format(idx, step))
 
     rospy.loginfo("Actions to complete:")
     for idx, action in enumerate(ACTIONS):
