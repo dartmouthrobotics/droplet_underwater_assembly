@@ -23,6 +23,9 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 8: bottom back right
 """
 
+# yeah so we can engage the rp stabilization and then run a control loop that tries to center the tag and finds a certain distance
+# I LOVE IT I THINK I GOT IT!!!!
+
 
 class PIDTracker(object):
     # how should we handle the I-gains?
@@ -188,7 +191,6 @@ class PIDTracker(object):
     def get_error(self):
         return utils.get_error(self.current_position, self.goal_position)
 
-
     def get_xyyaw_thrust_vector(self):
         error = self.get_error()
 
@@ -265,10 +267,10 @@ class OpenLoopTracker(PIDTracker):
         super(OpenLoopTracker, self).__init__(
             **kwargs
         )
-        self.pulse_on_z_thrust = 0.5
+        self.pulse_on_z_thrust = 0.6
         self.pulse_on_yaw_thrust = 0.5
 
-        self.on_time_ratio = 0.6
+        self.on_time_ratio = 0.7
         self.cycle_time = 2.0
         self.cycle_start_time = None
 
@@ -287,7 +289,6 @@ class OpenLoopTracker(PIDTracker):
         return current_cycle_time < self.on_time_ratio * self.cycle_time
 
     def get_next_rc_override(self):
-        #zrp_thrusts = self.get_zrp_thrust_vector()
         zrp_thrusts = [0.0, 0.0, 0.0]
         xyyaw_thrusts = [0.0, 0.0, 0.0]
 
@@ -310,3 +311,52 @@ class OpenLoopTracker(PIDTracker):
         return utils.construct_rc_message(motor_speeds)
         # we want to maintain the roll, yaw correction since we get that every frame easily
         # lets try pulsing up and to the left
+
+
+class BinaryPController(PIDTracker):
+    def __init__(self, **kwargs):
+        super(BinaryPController, self).__init__(**kwargs)
+        self.x_d = 0.0
+        self.y_d = 0.0
+        self.z_d = 0.0
+        self.yaw_d = 0.0
+
+        self.x_i = 0.0
+        self.y_i = 0.0
+        self.z_i = 0.0
+        self.yaw_i = 0.0
+
+        self.xyz_on_thrust = 0.4
+        self.yaw_on_thrust = 0.2
+
+    def get_next_rc_override(self):
+        zrp_thrusts = self.get_zrp_thrust_vector()
+        zrp_thrusts[2] = 0.0
+        zrp_thrusts[1] = 0.0
+
+        xyyaw_thrusts = self.get_xyyaw_thrust_vector()
+
+        thrust_vector = xyyaw_thrusts + zrp_thrusts
+
+        for (index, thrust) in enumerate(thrust_vector):
+            # ignore roll and pitch in this
+            if index in (3,4):
+                continue
+
+            on_thrust = self.xyz_on_thrust
+            if index == 5:
+                on_thrust = self.yaw_on_thrust
+
+            if thrust > 0.0:
+                thrust_vector[index] = on_thrust
+            if thrust < 0.0:
+                thrust_vector[index] = -on_thrust
+
+        motor_intensities = self.convert_thrust_vector_to_motor_intensities(thrust_vector)
+
+        motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
+
+        for speed in motor_speeds:
+            assert((abs(speed) - 1500) <= 150)
+
+        return utils.construct_rc_message(motor_speeds)

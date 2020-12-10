@@ -3,7 +3,7 @@ import config
 
 class AssemblyAction(object):
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0, **kwargs):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms']
+        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
@@ -68,5 +68,9 @@ class AssemblyAction(object):
 
         if self.action_type == 'change_platforms':
             return kwargs['last_tracked_marker_time'] is not None and (rospy.Time.now() - kwargs['last_tracked_marker_time']).to_sec() < 0.5
+
+        if self.action_type == 'binary_P_move':
+            reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
+            return reached_goal
 
         raise Exception("Unrecognized action type!")

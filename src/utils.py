@@ -187,6 +187,9 @@ def average_velocity(values_history, number_terms):
     if number_terms > len(values_history):
         number_terms = len(values_history)
     
+    if number_terms == 0:
+        return total
+
     for i in range(number_terms):
         for j in range(6):
             total[j] = total[j] + values_history[len(values_history) - 1 - i][j]

@@ -24,7 +24,7 @@
       <arg name="exposure_time" value="8100"/>
     </include>
 
-    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/droplet_underwater_assembly/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/camera_info /tf /tf_static /mavros/rc/override /mavros/imu/data_raw /imu/data /mavros/imu/data /goal_pose"></node>
+    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/droplet_underwater_assembly/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /tf /tf_static /mavros/rc/override /mavros/imu/data_raw /imu/data /mavros/imu/data /goal_pose"></node>
 
   </group>
 

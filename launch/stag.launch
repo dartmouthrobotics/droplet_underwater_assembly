@@ -14,10 +14,11 @@
     <param name="camera_info_topic" type="string" value="/camera_array/cam0/camera_info" />
     <param name="tag_id_type" type="int" value="21" />
     <param name="marker_frame_prefix" type="string" value="/ar_marker_" />
-    <param name="default_marker_size" type="double" value="0.166" />
+    <param name="default_marker_size" type="double" value="0.100" />
     <param name="output_frame_id"     type="string" value="/base_link" />
     <param name="image_frame_id"      type="string" value="/cam_0_optical_frame" />
     <param name="marker_message_topic" type="string" value="/bluerov_controller/ar_tag_detector" />
+    <param name="process_images_in_parallel" type="bool" value="true" />
     <param name="use_marker_bundles" type="bool" value="true" />
     <param name="publish_debug_images" type="bool" value="false" />
     <rosparam command="load" file="$(find droplet_underwater_assembly)/param/bundle-four-stags-aluminum.json" />

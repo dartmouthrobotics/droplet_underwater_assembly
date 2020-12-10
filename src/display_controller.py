@@ -29,14 +29,15 @@ class DisplayController(object):
             return
 
         lcd_command = "lcd,{},{}\n".format(line_1, line_2)
-        serial_connection.write(lcd_command)
+        self.serial_connection.write(lcd_command)
 
 
     def update_buzzer_pattern(self, buzzer_pattern):
-        buzz = "buzzer,20,{}\n".format(buzzer_pattern)
+        buzz = "buzzer,30,{}\n".format(buzzer_pattern)
+        self.serial_connection.write(buzz)
 
 
     def update_led_state(self, color, pattern):
         led_command = "led,{},{},{},{}\n".format(color[0], color[1], color[2], pattern)
 
-        serial_connection.write(led_command)
+        self.serial_connection.write(led_command)

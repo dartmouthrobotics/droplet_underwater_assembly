@@ -2,6 +2,7 @@
 import sys
 import datetime
 import os
+import time
 
 import rospy
 import rospkg
@@ -22,6 +23,19 @@ import display_controller
 
 import build_platform
 
+# how can we deal with the different needs from the open loop control. Maybe if we just do something really simple
+# like having another two controllers everything will be happy
+
+# at long distance, the angle is really unstable but the xyz location seems pretty stable
+# maybe a good choice would be to use a different set of data. So we can look at the
+# xyz of the marker in the base link frame and yaw is the tan of the marker's xy
+# we can do this. What is a more general way of doing things? We need to move along a trajectory to succeed right?
+# like we need to follow the slope down
+
+# we can do hacky things like letting the bot sink for the "down" part.
+# so the new plan is to back up and rise or back up and sink
+
+
 
 LATEST_MARKER_MESSAGE = None
 RAW_VELOCITY_HISTORY = []
@@ -31,6 +45,12 @@ DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
 IS_USING_OPEN_LOOP_CONTROL = False
+
+BINARY_P_CONTROL_SELECTOR = 'BINARY_P'
+OPEN_LOOP_CONTROL_SELECTOR = 'OPEN_LOOP'
+PID_CONTROL_SELECTOR = 'PID'
+
+ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
 
 DISPLAY = None
 try:
@@ -43,7 +63,6 @@ LAST_TRACKED_MARKER_TIME = None
 latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
-
 
 pid_gains_dict = dict(
     x_p=4.00,
@@ -70,11 +89,43 @@ CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
     **pid_gains_dict
 )
 
+ERROR_DISPLAY_RATE = 0.75
+LAST_ERROR_DISPLAY = None
+
 OPEN_LOOP_TRACKER = trajectory_tracker.OpenLoopTracker(
     **pid_gains_dict
 )
 
+binary_gains = dict(
+    x_p=3.00,
+    y_p=3.00,
+    yaw_p=3.00, 
+    x_d=0.0, 
+    y_d=0.0,
+    yaw_d=1.0,
+    x_i=0,
+    y_i=0,
+    yaw_i=0.00,
+    roll_p=-0.3,
+    roll_i=0.0,
+    roll_d=1.0,
+    z_p=20.5,
+    z_i=0.0,
+    z_d=0.00,
+    pitch_p=-2.0,
+    pitch_i=0.0,
+    pitch_d=0.75,
+) 
+
+BINARY_P_TRACKER = trajectory_tracker.PIDTracker(
+    **binary_gains
+)
+
+LATEST_VELOCITY = None
+
 TRAJECTORY_TRACKER = CLOSED_LOOP_TRACKER
+
+HAVE_ANY_MARKER_READING = False
 
 BUILD_PLATFORM = build_platform.BuildPlatform(
     pickup_dimensions=config.PICKUP_PLATFORM_DIMENSIONS,
@@ -91,9 +142,16 @@ BUILD_PLATFORM = build_platform.BuildPlatform(
 #ACTIONS = BUILD_PLATFORM.convert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
 
 ACTIONS = [
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE),
     assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
-    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE)
+    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
+    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
+    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
+    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
+    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE),
+    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=0),
+    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
+    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE)
 ]
 
 
@@ -105,7 +163,9 @@ def imu_callback(imu_message):
 
 
 def marker_callback(marker_message):
-    global LATEST_MARKER_MESSAGE, TIMES_TRACKED_MARKER_SEEN, LATEST_VELOCITY, RAW_VELOCITY_HISTORY, LAST_TRACKED_MARKER_TIME
+    global LATEST_MARKER_MESSAGE, TIMES_TRACKED_MARKER_SEEN, LATEST_VELOCITY, RAW_VELOCITY_HISTORY, LAST_TRACKED_MARKER_TIME, HAVE_ANY_MARKER_READING
+
+    HAVE_ANY_MARKER_READING = True
 
     if LATEST_MARKER_MESSAGE is not None:
         last_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
@@ -114,7 +174,6 @@ def marker_callback(marker_message):
         if marker.id == config.TRACKED_MARKER_ID:
             #LAST_TRACKED_MARKER_TIME = marker_message.header.stamp
             LAST_TRACKED_MARKER_TIME = rospy.Time.now()
-            print "marker {}".format(config.TRACKED_MARKER_ID)
 
             if LATEST_MARKER_MESSAGE is not None:
                 current_marker_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(marker))
@@ -140,7 +199,11 @@ def get_latest_velocity_xyzrpy():
 
     return [latest_vel_avg[0], latest_vel_avg[1], 0.0, 0.0, 0.0, -latest_imu_message.angular_velocity.z]
 
+
 def get_robot_pose_xyzrpy():
+    if LATEST_MARKER_MESSAGE is None:
+        return [0.0] * 6
+
     robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
     robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
     
@@ -148,26 +211,28 @@ def get_robot_pose_xyzrpy():
 
 
 def update_closed_loop_controller(current_action):
-        TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
-        goal_pose_publisher.publish(
-            utils.pose_stamped_from_xyzrpy(
-                xyzrpy=current_action.goal_pose,
-                frame_id=BUILD_PLATFORM.frame_id,
-                seq=0,
-                stamp=rospy.Time.now()
-            )
+    TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
+    goal_pose_publisher.publish(
+        utils.pose_stamped_from_xyzrpy(
+            xyzrpy=current_action.goal_pose,
+            frame_id=BUILD_PLATFORM.frame_id,
+            seq=0,
+            stamp=rospy.Time.now()
         )
+    )
 
-        latest_vel_avg = get_latest_velocity_xyzrpy()
 
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+
+    if LATEST_VELOCITY is not None:
         VELOCITY_HISTORY.append(LATEST_VELOCITY)
-        
-        latest_vel_avg = get_latest_velocity_xyzrpy()
-        robot_pose_xyzrpy = get_robot_pose_xyzrpy()
+    
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+    robot_pose_xyzrpy = get_robot_pose_xyzrpy()
 
-        TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
-        TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
-        TRAJECTORY_TRACKER.set_current_velocity(latest_vel_avg)
+    TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
+    TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
+    TRAJECTORY_TRACKER.set_current_velocity(latest_vel_avg)
 
 
 def update_open_loop_controller(current_action):
@@ -179,18 +244,45 @@ def update_open_loop_controller(current_action):
     OPEN_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
     OPEN_LOOP_TRACKER.set_current_velocity(latest_vel_avg)
 
+
+def update_binary_P_controller(current_action):
+    BINARY_P_TRACKER.set_goal_position(current_action.goal_pose)
+    goal_pose_publisher.publish(
+        utils.pose_stamped_from_xyzrpy(
+            xyzrpy=current_action.goal_pose,
+            frame_id=BUILD_PLATFORM.frame_id,
+            seq=0,
+            stamp=rospy.Time.now()
+        )
+    )
+
+
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+
+    if LATEST_VELOCITY is not None:
+        VELOCITY_HISTORY.append(LATEST_VELOCITY)
+    
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+    robot_pose_xyzrpy = get_robot_pose_xyzrpy()
+
+    BINARY_P_TRACKER.set_latest_imu_reading(latest_imu_message)
+    BINARY_P_TRACKER.set_current_position(robot_pose_xyzrpy)
+    BINARY_P_TRACKER.set_current_velocity(latest_vel_avg)
+
 # how do we want to decide when the open loop controller should stop?
 
 def act_on_current_action(current_action, pose_error):
-    global IS_USING_OPEN_LOOP_CONTROL, LAST_TRACKED_MARKER_TIME
+    global ACTIVE_CONTROLLER, LAST_TRACKED_MARKER_TIME
 
     goal_not_reached = current_action.reached_goal_time is None
 
+    started = False
     if not current_action.is_started:
         tolerance = config.TIGHT_POSE_TOLERANCE
         reached_goal = all([abs(error) < tol for (error, tol) in zip(pose_error, tolerance)])
 
         if current_action.action_type == 'open_gripper':
+            ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
                 GRIPPER_HANDLER.start_opening()
                 current_action.start()
@@ -198,8 +290,10 @@ def act_on_current_action(current_action, pose_error):
                 TRAJECTORY_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
                 TRAJECTORY_TRACKER.x_i = config.DEFAULT_X_I_GAIN
                 TRAJECTORY_TRACKER.clear_error_integrals()
+                started = True
 
         elif current_action.action_type == 'close_gripper':
+            ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
                 GRIPPER_HANDLER.start_closing()
                 current_action.start()
@@ -207,35 +301,65 @@ def act_on_current_action(current_action, pose_error):
                 TRAJECTORY_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
                 TRAJECTORY_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
                 TRAJECTORY_TRACKER.clear_error_integrals()
+                started = True
 
         elif current_action.action_type == 'change_platforms':
             config.TRACKED_MARKER_ID = current_action.to_platform_id
-            IS_USING_OPEN_LOOP_CONTROL = True
+            ACTIVE_CONTROLLER = OPEN_LOOP_CONTROL_SELECTOR
             LAST_TRACKED_MARKER_TIME = None
+            TRAJECTORY_TRACKER.clear_error_integrals()
+
+            if DISPLAY is not None:
+                DISPLAY.update_led_state([255,255,0],1)
             current_action.start()
+            started = True
+        elif current_action.action_type == 'move':
+            ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
+
+            if DISPLAY is not None:
+                DISPLAY.update_led_state([255,0,255],1)
+            current_action.start()
+            started = True
+        elif current_action.action_type == 'binary_P_move':
+            ACTIVE_CONTROLLER = BINARY_P_CONTROL_SELECTOR
+            if DISPLAY is not None:
+                DISPLAY.update_led_state([255,0,0],1)
+            current_action.start()
+            started = True
         else:
-            current_action.start()
+            raise Exception("Unrecognized action type!")
 
         if current_action.is_started:
             rospy.loginfo("Starting action: {}".format(current_action))
-
-        if current_action.action_type != 'change_platforms':
-            IS_USING_OPEN_LOOP_CONTROL = False
     else:
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
             rospy.loginfo("Completed action: {}. Error: {}".format(current_action, pose_error))
 
             if len(ACTIONS) > 0:
-                return ACTIONS.pop(0)
+                return True, ACTIONS.pop(0)
 
     if goal_not_reached and current_action.reached_goal_time is not None:
         rospy.loginfo("Reached goal position. Holding.")
 
-    return current_action
+    return started, current_action
+
+
+def update_active_controller(current_action):
+    if ACTIVE_CONTROLLER == OPEN_LOOP_CONTROL_SELECTOR: 
+        update_open_loop_controller(current_action)
+    elif ACTIVE_CONTROLLER == PID_CONTROL_SELECTOR:
+        update_closed_loop_controller(current_action)
+    elif ACTIVE_CONTROLLER == BINARY_P_CONTROL_SELECTOR:
+        update_binary_P_controller(current_action)
+    else:
+        raise Exception("Unrecognized active control selector!")
 
 
 def run_build_plan(rc_override_publisher):
-    global latest_imu_message, VELOCITY_HISTORY, RUNNING_EXPERIMENT
+    global latest_imu_message, VELOCITY_HISTORY, RUNNING_EXPERIMENT, LAST_ERROR_DISPLAY
+
+    if DISPLAY is not None:
+        DISPLAY.update_buzzer_pattern(1)
 
     publish_rate = rospy.Rate(config.MAIN_LOOP_RATE)
     stop_message = utils.construct_stop_rc_message()
@@ -254,27 +378,42 @@ def run_build_plan(rc_override_publisher):
         RUNNING_EXPERIMENT = True
         loop_start = rospy.Time.now()
 
-        if current_action.action_type == "change_platforms":
-            update_open_loop_controller(current_action)
-        else:
-            update_closed_loop_controller(current_action)
+        update_active_controller(current_action)
 
         goal_not_reached = current_action.reached_goal_time is None
-        pose_error = TRAJECTORY_TRACKER.get_error()
+        pose_error = None
 
-        current_action = act_on_current_action(current_action, pose_error)
+        if ACTIVE_CONTROLLER == OPEN_LOOP_CONTROL_SELECTOR: 
+            pose_error = OPEN_LOOP_TRACKER.get_error()
+        elif ACTIVE_CONTROLLER == PID_CONTROL_SELECTOR:
+            pose_error = CLOSED_LOOP_TRACKER.get_error()
+        elif ACTIVE_CONTROLLER == BINARY_P_CONTROL_SELECTOR:
+            pose_error = BINARY_P_TRACKER.get_error()
+        else:
+            raise Exception("Unrecognized active control selector!")
+        if DISPLAY is not None:
+            if LAST_ERROR_DISPLAY is None or (rospy.Time.now() - LAST_ERROR_DISPLAY).to_sec() > ERROR_DISPLAY_RATE:
+                DISPLAY.update_lcd_display("{:0.2f} {:0.2f} {:0.2f}".format(*pose_error[0:3]), "{:0.2f} {:0.2f} {:0.2f}".format(*pose_error[3:6]))
+                LAST_ERROR_DISPLAY = rospy.Time.now()
 
-        if current_action.action_type == "change_platforms":
-            update_open_loop_controller(current_action)
+        changed = False
+        changed, current_action = act_on_current_action(current_action, pose_error)
+
+        if changed:
+            update_active_controller(current_action)
 
         if current_action.is_started and current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME) and len(ACTIONS) == 0:
             rospy.loginfo("Completed all actions! Terminating")
             break
 
-        if  current_action.action_type == "change_platforms":
+        if ACTIVE_CONTROLLER == OPEN_LOOP_CONTROL_SELECTOR: 
             go_message = OPEN_LOOP_TRACKER.get_next_rc_override()
+        elif ACTIVE_CONTROLLER == PID_CONTROL_SELECTOR:
+            go_message = CLOSED_LOOP_TRACKER.get_next_rc_override()
+        elif ACTIVE_CONTROLLER == BINARY_P_CONTROL_SELECTOR:
+            go_message = BINARY_P_TRACKER.get_next_rc_override()
         else:
-            go_message = TRAJECTORY_TRACKER.get_next_rc_override()
+            raise Exception("Unrecognized active control selector!")
 
         GRIPPER_HANDLER.update()
         GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
@@ -303,8 +442,14 @@ def run_build_plan(rc_override_publisher):
 
 
 def wait_for_marker_data():
-    poll_rate = rospy.Rate(10)
+    poll_rate = rospy.Rate(2)
     while TIMES_TRACKED_MARKER_SEEN < 100 and not rospy.is_shutdown():
+        if DISPLAY is not None:
+            if HAVE_ANY_MARKER_READING:
+                DISPLAY.update_lcd_display("STag on.", "Waiting...")
+            else:
+                DISPLAY.update_lcd_display("No STag!", "No STag!")
+
         poll_rate.sleep()
 
 
@@ -360,8 +505,14 @@ def main():
     for idx, action in enumerate(ACTIONS):
         rospy.loginfo("    {}: {}".format(idx, action))
 
+    rospy.loginfo("Pauing for display initialization...")
+    time.sleep(10)
+    if DISPLAY is not None:
+        DISPLAY.update_led_state([0, 255, 0], 1)       
+
     rospy.loginfo("Waiting for enough marker data....")
-    wait_for_marker_data()
+    #wait_for_marker_data()
+    time.sleep(45)
     rospy.loginfo("Got marker data, going!!")
 
     run_build_plan(
