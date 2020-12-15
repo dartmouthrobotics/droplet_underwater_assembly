@@ -16,11 +16,16 @@ class GripperHandler(object):
         # zero means not moving, less than zero means closing, more than zero means opening.
         self.move_direction = 0
 
+        self.wrist_rotation_increment_per_frame_pwm = 2
+
         # gripper starts aligned with robot body
-        #self.current_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
-        #self.desired_rotation_position = config.GRIPPER_ROTATION_MAXIMUM 
+        self.current_rotation_position = config.GRIPPER_ROTATION_INITIAL
+        self.desired_rotation_position = config.GRIPPER_ROTATION_INITIAL
 
         self.gripper_rotation_service_proxy = rospy.ServiceProxy("/mavros/cmd/command", mavros_msgs.srv.CommandLong)
+
+        self.wrist_min_pwm = 900
+        self.wrist_max_pwm = 1600
 
     def rotate_to_position(self, rotation_position):
         self.desired_rotation_position = rotation_position
@@ -64,14 +69,16 @@ class GripperHandler(object):
             self.move_direction = 0
             self.toggle_start_time = None
 
-        #if self.desired_rotation_position is not None:
-        #    if self.desired_rotation_position < self.current_rotation_position:
-        #        self.current_rotation_position = self.current_rotation_position - 1
-        #        self.publish_gripper_rotation_position(self.current_rotation_position)
+        if self.desired_rotation_position is not None:
+            if self.desired_rotation_position < self.current_rotation_position:
+                self.current_rotation_position = self.current_rotation_position - self.wrist_rotation_increment_per_frame_pwm
+                self.publish_gripper_rotation_position(self.current_rotation_position)
 
-        #    elif self.desired_rotation_position > self.current_rotation_position:
-        #        self.current_rotation_position = self.current_rotation_position + 1
-        #        self.publish_gripper_rotation_position(self.current_rotation_position)
+            elif self.desired_rotation_position > self.current_rotation_position:
+                self.current_rotation_position = self.current_rotation_position + self.wrist_rotation_increment_per_frame_pwm
+
+                assert()
+                self.publish_gripper_rotation_position(self.current_rotation_position)
 
     def publish_gripper_rotation_position(self, position):
         self.gripper_rotation_service_proxy(

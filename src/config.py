@@ -6,11 +6,11 @@ RC_OVERRIDE_TOPIC = "/mavros/rc/override"
 GOAL_POSE_TOPIC = "/goal_pose"
 AR_MARKER_TOPIC = "/bluerov_controller/ar_tag_detector"
 
-# right angle to robot body
-GRIPPER_ROTATION_RIGHT_ANGLE = 1230
+MIN_WRIST_PWM = 1200
+MAX_WRIST_PWM = 1520
 
-# aligned with robot body
-GRIPPER_ROTATION_ALIGNED_BODY = 1500
+# the angle it starts at
+GRIPPER_ROTATION_INITIAL = 1500
 
 BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot', 'pickup_wrist_pwm', 'drop_wrist_pwm'])
 
@@ -26,7 +26,6 @@ BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot', 'pi
 #    BuildStep(pickup_slot=(0,0), drop_slot=(1,1)),
 #    BuildStep(pickup_slot=(0,4), drop_slot=(2,6)),
 #    BuildStep(pickup_slot=(0,8), drop_slot=(2,1)),
-#
 #]
 
 # 6 block pyramid

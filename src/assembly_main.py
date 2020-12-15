@@ -23,18 +23,11 @@ import display_controller
 
 import build_platform
 
-# how can we deal with the different needs from the open loop control. Maybe if we just do something really simple
-# like having another two controllers everything will be happy
 
-# at long distance, the angle is really unstable but the xyz location seems pretty stable
-# maybe a good choice would be to use a different set of data. So we can look at the
-# xyz of the marker in the base link frame and yaw is the tan of the marker's xy
-# we can do this. What is a more general way of doing things? We need to move along a trajectory to succeed right?
-# like we need to follow the slope down
+# alright changing direction to focusing on the gripper.
 
-# we can do hacky things like letting the bot sink for the "down" part.
-# so the new plan is to back up and rise or back up and sink
-
+# how do we handle the slots being 3d instead of just two? I guess we need a farthest right one? Or a farthest left? Maybe I can just build it and we can go from there.
+# as a first step, we can have it rotate its hand. We can have a new assembly action "rotate_wrist" that just issues the commands from the gripper handler until it is done.
 
 
 LATEST_MARKER_MESSAGE = None
@@ -328,6 +321,16 @@ def act_on_current_action(current_action, pose_error):
             started = True
         else:
             raise Exception("Unrecognized action type!")
+
+        elif current_action.action_type == 'move_wrist':
+            ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
+            if DISPLAY is not None:
+                pass
+            
+            GRIPPER_HANDLER.desired_rotation_position = current_action.wrist_rotation_pwm
+
+            current_action.start()
+            started = True
 
         if current_action.is_started:
             rospy.loginfo("Starting action: {}".format(current_action))

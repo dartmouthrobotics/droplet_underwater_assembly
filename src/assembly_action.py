@@ -1,7 +1,25 @@
 import rospy
 import config
+import numpy
 
 class AssemblyAction(object):
+    @classmethod
+    def construct_change_platforms(cls, platform_id):
+        return cls('change_platforms', [0.0] * 6, [1.0] * 6, to_platform_id=platform_id),
+
+    @classmethod
+    def construct_rotate_wrist(cls, pwm, pose):
+        if pwm > config.MAX_WRIST_PWM or pwm < config.MIN_WRIST_PWM:
+            raise Exception(
+                "Given wrist rotation {pwm} is out of the valid range: ({min}, {max})".format(
+                    pwm=pwm,
+                    min=config.MIN_WRIST_PWM,
+                    max=config.MAX_WRIST_PWM
+                )
+            )
+
+        return cls('move_wrist', pose, [1.0] * 6, wrist_rotation_pwm=pwm)
+
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0, **kwargs):
         self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move']
         self.action_type = action_type
@@ -14,6 +32,12 @@ class AssemblyAction(object):
         self.gripper_hold_time = config.GRIPPER_HOLD_TIME
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
+
+        if self.action_type == 'move_wrist':
+            if 'wrist_rotation_pwm' not in kwargs:
+                raise Exception("The wrist_rotation_pwm kwarg must be provided for the 'move_wrist' action.")
+            else:
+                self.wrist_rotation_pwm = kwargs['wrist_rotation_pwm']
 
         if 'to_platform_id' in kwargs:
             self.to_platform_id = kwargs['to_platform_id']
@@ -73,4 +97,13 @@ class AssemblyAction(object):
             reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
             return reached_goal
 
+        if self.action_type == 'move_wrist':
+            if self.gripper_handler.desired_rotation_position is None:
+                return False
+
+            return self.gripper_handler.desired_rotation_position == self.gripper_handler.current_rotation_position
+
         raise Exception("Unrecognized action type!")
+
+
+

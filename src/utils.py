@@ -15,7 +15,6 @@ import geometry_msgs.msg
 
 ARMING_SERVICE_PROXY = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
 
-
 def set_motor_arming(is_armed):
     if is_armed:
         rospy.loginfo("Arming motors")

@@ -1,0 +1,5 @@
+; comment
+
+PICKUP 0 X Y Z; pickup from platform 0 at location X Y
+DROP 0 X Y Z; drop at location X Y on platform 0
+ROTATE_WRIST 1500 ; rotate wrist to the 1500 position
