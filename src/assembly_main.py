@@ -48,6 +48,16 @@ except:
 
 LAST_TRACKED_MARKER_TIME = None
 
+PLATFORMS = [
+    build_platform.BuildPlatform(
+        tag_id=5,
+        slot_dimensions=(0.08, 0.08, 0.12),
+        bottom_back_left_slot_location=(1.0, 1.0, 1.0),
+        dimensions=(3,3,3),
+        center_back_pose=config.CENTER_BACK_POSE
+    )
+]
+
 latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
@@ -115,19 +125,7 @@ TRAJECTORY_TRACKER = CLOSED_LOOP_TRACKER
 
 HAVE_ANY_MARKER_READING = False
 
-BUILD_PLATFORM = build_platform.BuildPlatform(
-    pickup_dimensions=config.PICKUP_PLATFORM_DIMENSIONS,
-    drop_dimensions=config.DROP_PLATFORM_DIMENSIONS,
-    row_spacing=config.SLOT_Z_STRIDE,
-    column_spacing=config.SLOT_X_STRIDE,
-    min_pickup_slot=config.MIN_PICKUP_SLOT,
-    min_drop_slot=config.MIN_DROP_SLOT,
-    frame_id="/build_platform"
-)
-
 # gonna need many build platforms. Maybe I can wait on that?
-
-#ACTIONS = BUILD_PLATFORM.convert_build_steps_into_assembly_actions(config.BUILD_PLAN, GRIPPER_HANDLER)
 
 ACTIONS = [
     assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
@@ -174,11 +172,6 @@ def marker_callback(marker_message):
             TIMES_TRACKED_MARKER_SEEN = TIMES_TRACKED_MARKER_SEEN + 1
 
 
-            if latest_imu_message is not None:
-                robot_pose = utils.to_xyzrpy(*utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE))
-                BUILD_PLATFORM.update_platform_roll_pitch_estimate(robot_pose, latest_imu_message)
-
-
 def get_latest_velocity_xyzrpy():
     latest_vel_avg = utils.average_velocity(RAW_VELOCITY_HISTORY, 2)
 
@@ -203,7 +196,7 @@ def update_closed_loop_controller(current_action):
     goal_pose_publisher.publish(
         utils.pose_stamped_from_xyzrpy(
             xyzrpy=current_action.goal_pose,
-            frame_id=BUILD_PLATFORM.frame_id,
+            frame_id="/world",
             seq=0,
             stamp=rospy.Time.now()
         )
@@ -238,7 +231,7 @@ def update_binary_P_controller(current_action):
     goal_pose_publisher.publish(
         utils.pose_stamped_from_xyzrpy(
             xyzrpy=current_action.goal_pose,
-            frame_id=BUILD_PLATFORM.frame_id,
+            frame_id="/world",
             seq=0,
             stamp=rospy.Time.now()
         )
@@ -314,9 +307,6 @@ def act_on_current_action(current_action, pose_error):
                 DISPLAY.update_led_state([255,0,0],1)
             current_action.start()
             started = True
-        else:
-            raise Exception("Unrecognized action type!")
-
         elif current_action.action_type == 'move_wrist':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if DISPLAY is not None:
@@ -326,6 +316,8 @@ def act_on_current_action(current_action, pose_error):
 
             current_action.start()
             started = True
+        else:
+            raise Exception("Unrecognized action type!")
 
         if current_action.is_started:
             rospy.loginfo("Starting action: {}".format(current_action))
@@ -452,8 +444,8 @@ def wait_for_marker_data():
 
 
 def main():
-    global ACTIONS, DRY_RUN, goal_pose_publisher, transform_broadcaster
-    rospy.init_node("binary_pid_control")
+    global PLATFORMS, ACTIONS, DRY_RUN, goal_pose_publisher, transform_broadcaster
+    rospy.init_node("droplet_underwater_assembly")
 
     marker_subscriber = rospy.Subscriber(
         config.AR_MARKER_TOPIC,
@@ -488,6 +480,11 @@ def main():
     except:
         rospy.logwarn("dry_run parameter not provided. Defaulting to test mode.")
 
+    try:
+        build_plan_file = rospy.get_param("~build_plan_file")
+    except:
+        rospy.logerr("The build_plan_file parameter is required to launch the code.")
+
     if DRY_RUN:
         rospy.loginfo("Running in test mode.")
 
@@ -495,9 +492,16 @@ def main():
         time=config.EXPERIMENT_MAX_DURATION_SECONDS
     ))
 
-    #rospy.loginfo("Running build plan:")
-    #for idx, step in enumerate(config.BUILD_PLAN):
-    #    rospy.loginfo("    {}: {}".format(idx, step))
+    parser = build_plan_parser.BuildPlanParser(
+        build_platforms=PLATFORMS,
+        high_offset=config.HIGH_Z_OFFSET,
+        mid_low_offset=config.MID_LOW_Z_OFFSET
+    )
+
+    ACTIONS = parser.construct_actions_from_text(
+        build_plan_file=build_plan_file,
+        start_platform=config.TRACKED_MARKER_ID,
+    )
 
     rospy.loginfo("Actions to complete:")
     for idx, action in enumerate(ACTIONS):
@@ -509,8 +513,7 @@ def main():
         DISPLAY.update_led_state([0, 255, 0], 1)       
 
     rospy.loginfo("Waiting for enough marker data....")
-    #wait_for_marker_data()
-    time.sleep(45)
+    wait_for_marker_data()
     rospy.loginfo("Got marker data, going!!")
 
     run_build_plan(

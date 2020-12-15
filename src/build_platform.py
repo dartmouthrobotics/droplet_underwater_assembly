@@ -11,11 +11,17 @@ class BuildPlatform(object):
     Abstraction for a build platform. The slot number (0,0) is the lowest X and lowest Z.
     This means the farthest from the tag and the lowest down. Slots are numbered
     """
-    def __init__(self, tag_id, slot_dimensions, bottom_back_left_slot_location, dimensions):
+    def __init__(self, tag_id, slot_dimensions, bottom_back_left_slot_location, dimensions, center_back_pose):
         self.roll_pitch_estimate = [0.0, 0.0] # unused
         self.frame_id = "/platform_{}".format(tag_id)
-        self.slot_matrix = self.construct_slot_matrix(slot_dimensions, bottom_back_left_slot_location, dimensions)
-        # lets fill in the thing with making the slots first
+        self.tag_id = tag_id
+        self.center_back_pose = center_back_pose
+        self.slot_matrix = self.construct_slot_matrix(
+            platform_dimensions=dimensions,
+            bottom_back_left_location=bottom_back_left_slot_location,
+            slot_dimensions=slot_dimensions
+        )
+
 
     def visualize_slots(self):
         pass
@@ -25,11 +31,12 @@ class BuildPlatform(object):
         """
         returns xyzrpy location for the given slot. indices is an indexable with format (x,y,z)
         """
-        return self.pickup_slot_matrix[indices[2]][indices[1]][indices[0]]
+        return self.slot_matrix[indices[2]][indices[1]][indices[0]]
 
 
     def construct_slot_matrix(self, platform_dimensions, slot_dimensions, bottom_back_left_location):
         slot_matrix = []
+
         for z_index in range(platform_dimensions[2]):
             z_value = bottom_back_left_location[2] + slot_dimensions[2] * z_index
             current_z_level = []

@@ -76,11 +76,12 @@ class GripperHandler(object):
 
             elif self.desired_rotation_position > self.current_rotation_position:
                 self.current_rotation_position = self.current_rotation_position + self.wrist_rotation_increment_per_frame_pwm
-
-                assert()
                 self.publish_gripper_rotation_position(self.current_rotation_position)
 
     def publish_gripper_rotation_position(self, position):
+        if self.current_rotation_position < config.MIN_WRIST_PWM or self.current_rotation_position > self.MAX_WRIST_PWM:
+            raise Exception("Error attempting to rotate to an invalid wrist pwm: {}. Valid range is: ({},{})".format(self.current_rotation_position, config.MIN_WRIST_PWM, config.MAX_WRIST_PWM))
+
         self.gripper_rotation_service_proxy(
             broadcast=False,
             command=183,

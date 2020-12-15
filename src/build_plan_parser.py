@@ -3,6 +3,7 @@ import config
 import assembly_action
 import rospy
 
+
 class BuildPlanParser(object):
     def __init__(self, build_platforms, high_offset, mid_low_offset):
         self.platforms_by_id = {
@@ -143,10 +144,11 @@ class BuildPlanParser(object):
         return actions
 
 
-    def construct_actions_from_text(self, build_plan_file, start_platform, start_wrist_pwm):
+    def construct_actions_from_text(self, build_plan_file, start_platform):
         parsed_actions = []
 
         current_platform = start_platform
+        print start_platform
 
         holding_block = False
         last_pose = None
@@ -156,7 +158,7 @@ class BuildPlanParser(object):
 
             for line_number, line in enumerate(file_lines):
                 line = line.strip()
-                command, _comment = line.split(';')
+                command = line.split(';')[0]
 
                 if command:
                     if command.startswith("PICKUP"):
@@ -165,11 +167,16 @@ class BuildPlanParser(object):
 
                         next_platform_id, x_coord, y_coord, z_coord = map(int, line.split(" ")[1:5])
 
+                        if next_platform_id not in self.platforms_by_id:
+                            raise Exception("Attempting to pick up from platform {} which does not exist. Valid platforms: {}".format(next_platform_id, list(self.platforms_by_id.keys())))
+
                         holding_block = True
 
                         if next_platform_id != current_platform:
                             # switch platform
-                            next_action = assembly_action.AssemblyAction.construct_change_platforms(next_platform_id),
+                            next_action = assembly_action.AssemblyAction.construct_change_platforms(next_platform_id)
+                            print "CHANGE"
+                            print next_action
                             parsed_actions.append(next_action)
                             current_platform = next_platform_id
 
@@ -187,6 +194,9 @@ class BuildPlanParser(object):
 
                         if not holding_block:
                             raise Exception("Cannot do a drop action while not holding a block.")
+
+                        if next_platform_id not in self.platforms_by_id:
+                            raise Exception("Attempting to drop on platform {} which does not exist. Valid platforms: {}".format(next_platform_id, list(self.platforms_by_id.keys())))
                         
                         holding_block = False
 
@@ -209,7 +219,9 @@ class BuildPlanParser(object):
                         """
                         move to an xyzrpy location relative to the platform
                         """
-                        x, y, z, roll, pitch, yaw = map(float, command.split(" ")[1:7])
+                        platform_id = int(command.split(" ")[1])
+
+                        x, y, z, roll, pitch, yaw = map(float, command.split(" ")[2:8])
 
                         target_location = [
                             x,y,z,roll,pitch,yaw

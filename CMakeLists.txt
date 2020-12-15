@@ -163,6 +163,7 @@ install(PROGRAMS
   src/reporting.py
   src/config.py
   src/assembly_action.py
+  src/build_plan_parser.py
   src/trajectory_tracker.py
   src/build_platform.py
   src/gripper_handler.py
@@ -202,11 +203,7 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/robots
 )
 
-install(FILES
-  param/bundle-four-stags-aluminum.json
-  param/flir_pool_calibration_1440_1080.yaml
-  param/marker_sizes_by_id.yaml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param
+install(DIRECTORY param/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param
 )
 
 install(DIRECTORY static_assets DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

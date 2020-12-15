@@ -5,7 +5,7 @@ import numpy
 class AssemblyAction(object):
     @classmethod
     def construct_change_platforms(cls, platform_id):
-        return cls('change_platforms', [0.0] * 6, [1.0] * 6, to_platform_id=platform_id),
+        return cls('change_platforms', [0.0] * 6, [1.0] * 6, to_platform_id=platform_id)
 
     @classmethod
     def construct_rotate_wrist(cls, pwm, pose):
@@ -59,7 +59,14 @@ class AssemblyAction(object):
         if self.action_type == "change_platforms":
             return "Changing to platform {}".format(self.to_platform_id)
 
-        return "Move to: {}".format(self.goal_pose)
+        if self.action_type == "move":
+            return "Move to: {}".format(self.goal_pose)
+
+        if self.action_type == "move_wrist":
+            return "Rotate wrist to {}".format(self.wrist_rotation_pwm)
+
+        else:
+            raise Exception("__str__ not implemented for assembly actions of type {}".format(self.action_type))
 
     def start(self):
         self.start_time = rospy.Time.now()
