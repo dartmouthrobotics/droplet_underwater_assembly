@@ -104,6 +104,3 @@ class AssemblyAction(object):
             return self.gripper_handler.desired_rotation_position == self.gripper_handler.current_rotation_position
 
         raise Exception("Unrecognized action type!")
-
-
-

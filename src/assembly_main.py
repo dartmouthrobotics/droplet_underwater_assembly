@@ -22,12 +22,7 @@ import config
 import display_controller
 
 import build_platform
-
-
-# alright changing direction to focusing on the gripper.
-
-# how do we handle the slots being 3d instead of just two? I guess we need a farthest right one? Or a farthest left? Maybe I can just build it and we can go from there.
-# as a first step, we can have it rotate its hand. We can have a new assembly action "rotate_wrist" that just issues the commands from the gripper handler until it is done.
+import build_plan_parser
 
 
 LATEST_MARKER_MESSAGE = None
@@ -457,7 +452,7 @@ def wait_for_marker_data():
 
 
 def main():
-    global DRY_RUN, goal_pose_publisher, transform_broadcaster
+    global ACTIONS, DRY_RUN, goal_pose_publisher, transform_broadcaster
     rospy.init_node("binary_pid_control")
 
     marker_subscriber = rospy.Subscriber(
