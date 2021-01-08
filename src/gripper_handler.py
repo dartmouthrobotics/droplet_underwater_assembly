@@ -26,6 +26,8 @@ class GripperHandler(object):
 
         self.wrist_min_pwm = 900
         self.wrist_max_pwm = 1600
+        self.wrist_update_pause_seconds = 0.1
+        self.last_wrist_update_time = None
 
     def rotate_to_position(self, rotation_position):
         self.desired_rotation_position = rotation_position
@@ -55,6 +57,23 @@ class GripperHandler(object):
             poll_rate.sleep()
 
     def update(self):
+        if self.desired_rotation_position is not None:
+            time_since_last_wrist_update = float("inf")
+
+            if self.last_wrist_update_time is not None:
+                time_since_last_wrist_update = (rospy.Time.now() - self.last_wrist_update_time).to_sec()
+
+            if time_since_last_wrist_update > self.wrist_update_pause_seconds:
+                if self.desired_rotation_position < self.current_rotation_position:
+                    self.current_rotation_position = self.current_rotation_position - self.wrist_rotation_increment_per_frame_pwm
+                    self.publish_gripper_rotation_position(self.current_rotation_position)
+                    self.last_wrist_update_time = rospy.Time.now()
+
+                elif self.desired_rotation_position > self.current_rotation_position:
+                    self.current_rotation_position = self.current_rotation_position + self.wrist_rotation_increment_per_frame_pwm
+                    self.publish_gripper_rotation_position(self.current_rotation_position)
+                    self.last_wrist_update_time = rospy.Time.now()
+
         if self.toggle_start_time is None and self.move_direction == 0:
             return
 
@@ -69,17 +88,8 @@ class GripperHandler(object):
             self.move_direction = 0
             self.toggle_start_time = None
 
-        if self.desired_rotation_position is not None:
-            if self.desired_rotation_position < self.current_rotation_position:
-                self.current_rotation_position = self.current_rotation_position - self.wrist_rotation_increment_per_frame_pwm
-                self.publish_gripper_rotation_position(self.current_rotation_position)
-
-            elif self.desired_rotation_position > self.current_rotation_position:
-                self.current_rotation_position = self.current_rotation_position + self.wrist_rotation_increment_per_frame_pwm
-                self.publish_gripper_rotation_position(self.current_rotation_position)
-
     def publish_gripper_rotation_position(self, position):
-        if self.current_rotation_position < config.MIN_WRIST_PWM or self.current_rotation_position > self.MAX_WRIST_PWM:
+        if self.current_rotation_position < config.MIN_WRIST_PWM or self.current_rotation_position > config.MAX_WRIST_PWM:
             raise Exception("Error attempting to rotate to an invalid wrist pwm: {}. Valid range is: ({},{})".format(self.current_rotation_position, config.MIN_WRIST_PWM, config.MAX_WRIST_PWM))
 
         self.gripper_rotation_service_proxy(

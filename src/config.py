@@ -55,28 +55,28 @@ BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot', 'pi
 PICKUP_PLATFORM_DIMENSIONS = [4, 12]
 DROP_PLATFORM_DIMENSIONS = [4, 15]
 
-MIN_PICKUP_SLOT = [-1.94, 0.42, -0.35, 0, 0, 0]
+MIN_PICKUP_SLOT = [-1.94, 0.12, -0.32, 0, 0, 0]
 MIN_DROP_SLOT = [-1.94, -0.115, -0.35, 0, 0, 0]
 
-TRACKED_MARKER_ID = 5
+TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.025, 0.025, 0.035, float("inf"), float("inf"), 0.018]
 COARSE_POSE_TOLERANCE = [0.04, 0.04, 0.04, float("inf"), float("inf"), 0.05]
 ULTRA_COARSE_POSE_TOLERANCE = [0.10, 0.10, 0.10, float("inf"), float("inf"), 0.08]
 
 BINARY_P_POSE_TOLERANCE = [0.2, 0.2, 0.2, float("inf"), float("inf"), 0.10]
 
-MAIN_LOOP_RATE = 40
+MAIN_LOOP_RATE = 60
 
 # for deep end
 #CENTER_BACK_POSE =  [-2.20, 0.15, 0.28, 0.0, 0, 0]
 
 # for shallow end
-CENTER_BACK_POSE =  [-1.30, 0.00, 0.12, 0.0, 0, 0]
+CENTER_BACK_POSE =  [-1.95, 0.00, 0.13, 0.0, 0, 0]
 
 SLOT_X_STRIDE = 0.083
 SLOT_Z_STRIDE = 0.19
 
-EXPERIMENT_MAX_DURATION_SECONDS = 300.0
+EXPERIMENT_MAX_DURATION_SECONDS = 600.0
 
 BLOCK_HELD_Z_I_GAIN = 0.15
 BLOCK_HELD_X_I_GAIN = 0.15

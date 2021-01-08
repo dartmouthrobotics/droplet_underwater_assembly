@@ -50,12 +50,19 @@ LAST_TRACKED_MARKER_TIME = None
 
 PLATFORMS = [
     build_platform.BuildPlatform(
-        tag_id=5,
-        slot_dimensions=(0.08, 0.08, 0.12),
-        bottom_back_left_slot_location=(1.0, 1.0, 1.0),
+        tag_id=0,
+        slot_dimensions=(0.083, 0.083, 0.19),
+        bottom_back_left_slot_location=(-1.58, -0.05, -0.15),
         dimensions=(3,3,3),
         center_back_pose=config.CENTER_BACK_POSE
-    )
+    ),
+    build_platform.BuildPlatform(
+        tag_id=3,
+        slot_dimensions=(0.083, 0.083, 0.19),
+        bottom_back_left_slot_location=(-1.58, 0.42, -0.15),
+        dimensions=(3,3,3),
+        center_back_pose=config.CENTER_BACK_POSE
+    ),
 ]
 
 latest_imu_message = None
@@ -310,7 +317,7 @@ def act_on_current_action(current_action, pose_error):
         elif current_action.action_type == 'move_wrist':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if DISPLAY is not None:
-                pass
+                DISPLAY.update_led_state([0,0,255],1)
             
             GRIPPER_HANDLER.desired_rotation_position = current_action.wrist_rotation_pwm
 
@@ -515,6 +522,9 @@ def main():
     rospy.loginfo("Waiting for enough marker data....")
     wait_for_marker_data()
     rospy.loginfo("Got marker data, going!!")
+
+    for action in ACTIONS:
+        action.gripper_handler = GRIPPER_HANDLER
 
     run_build_plan(
         rc_override_publisher
