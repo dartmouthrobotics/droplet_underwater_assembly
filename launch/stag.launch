@@ -3,13 +3,25 @@
 <launch>
   <arg name="standalone" default="false" doc="if this is set to the string true, does not spawn a nodelet manager. Otherwise it does."/>
 
+  <group if="$(arg spinnaker)">
+    <include file="$(find droplet_underwater_assembly)/description.launch" />
+
+    <include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
+      <arg name="nodelet_manager_name" value="bluerov_nodelet_manager"/> 
+      <arg name="config_file" value="$(find droplet_underwater_assembly)/param/flir_pool_calibration_1440_1080.yaml"/>
+      <arg name="start_nodelet_manager" value="false"/>
+      <arg name="color" value="false"/>
+      <arg name="exposure_time" value="8100"/>
+    </include>
+  </group>
+
   <group if="$(arg standalone)">
       <node pkg="nodelet" type="nodelet" name="bluerov_nodelet_manager" args="manager" output="screen" respawn="true">
           <param name="num_worker_threads" value="3" />
       </node>
   </group>
 
-  <node pkg="nodelet" type="nodelet" name="stag_ros" output="screen" args="load stag_ros/StagNodelet bluerov_nodelet_manager" respawn="false" required="true">
+  <node pkg="nodelet" type="nodelet" name="stag_ros" output="screen" args="load stag_ros/StagNodelet bluerov_nodelet_manager" respawn="false" required="false">
     <param name="camera_image_topic" type="string" value="/camera_array/cam0/image_raw" />
     <param name="camera_info_topic" type="string" value="/camera_array/cam0/camera_info" />
     <param name="tag_id_type" type="int" value="21" />

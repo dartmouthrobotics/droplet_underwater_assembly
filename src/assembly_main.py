@@ -3,6 +3,7 @@ import sys
 import datetime
 import os
 import time
+import random
 
 import rospy
 import rospkg
@@ -24,6 +25,10 @@ import display_controller
 import build_platform
 import build_plan_parser
 
+import stag_ros.srv
+
+import droplet_underwater_assembly.msg
+
 
 LATEST_MARKER_MESSAGE = None
 RAW_VELOCITY_HISTORY = []
@@ -40,6 +45,10 @@ PID_CONTROL_SELECTOR = 'PID'
 
 ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
 
+SET_TRACKED_BUNDLE_IDS_PROXY = rospy.ServiceProxy("/stag_ros/set_tracked_bundle_ids", stag_ros.srv.SetTrackedBundles)
+
+BUILD_PHASE_PUBLISHER = None
+
 DISPLAY = None
 try:
     DISPLAY = display_controller.DisplayController("/dev/ttyUSB0", 9600)
@@ -51,17 +60,19 @@ LAST_TRACKED_MARKER_TIME = None
 PLATFORMS = [
     build_platform.BuildPlatform(
         tag_id=0,
-        slot_dimensions=(0.083, 0.083, 0.19),
-        bottom_back_left_slot_location=(-1.58, -0.05, -0.15),
-        dimensions=(3,3,3),
-        center_back_pose=config.CENTER_BACK_POSE
+        slot_dimensions=(0.083, 0.083, 0.16),
+        bottom_back_left_slot_location=(-1.96, -0.45, -0.44),
+        dimensions=(7,7,3),
+        center_back_pose=config.CENTER_BACK_POSE_RIGHT
     ),
     build_platform.BuildPlatform(
-        tag_id=3,
-        slot_dimensions=(0.083, 0.083, 0.19),
-        bottom_back_left_slot_location=(-1.58, 0.42, -0.15),
-        dimensions=(3,3,3),
-        center_back_pose=config.CENTER_BACK_POSE
+        tag_id=4,
+        slot_dimensions=(0.083, 0.083, 0.16),
+        #bottom_back_left_slot_location=(-1.88, -0.34, -0.42),
+        bottom_back_left_slot_location=(-1.634, -0.132, -0.40),
+        dimensions=(5,7,3),
+        #center_back_pose=config.CENTER_BACK_POSE
+        center_back_pose=[-2.10, -0.130, -0.15, 0.0, 0.0, 0.0]
     ),
 ]
 
@@ -78,7 +89,7 @@ pid_gains_dict = dict(
     yaw_d=1.0,
     x_i=config.DEFAULT_X_I_GAIN,
     y_i=config.DEFAULT_Y_I_GAIN,
-    yaw_i=0.08,
+    yaw_i=0.15,
     roll_p=-0.3,
     roll_i=0.0,
     roll_d=1.0,
@@ -104,17 +115,17 @@ OPEN_LOOP_TRACKER = trajectory_tracker.OpenLoopTracker(
 binary_gains = dict(
     x_p=3.00,
     y_p=3.00,
-    yaw_p=3.00, 
+    yaw_p=2.00, 
     x_d=0.0, 
     y_d=0.0,
-    yaw_d=1.0,
+    yaw_d=0.1,
     x_i=0,
     y_i=0,
     yaw_i=0.00,
     roll_p=-0.3,
     roll_i=0.0,
     roll_d=1.0,
-    z_p=20.5,
+    z_p=4.5,
     z_i=0.0,
     z_d=0.00,
     pitch_p=-2.0,
@@ -134,18 +145,18 @@ HAVE_ANY_MARKER_READING = False
 
 # gonna need many build platforms. Maybe I can wait on that?
 
-ACTIONS = [
-    assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
-    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
-    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
-    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
-    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
-    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE),
-    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=0),
-    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
-    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE)
-]
+#ACTIONS = [
+#    assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
+#    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
+#    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
+#    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
+#    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
+#    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE),
+#    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=0),
+#    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
+#    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE)
+#]
 
 
 def imu_callback(imu_message):
@@ -272,7 +283,7 @@ def act_on_current_action(current_action, pose_error):
         if current_action.action_type == 'open_gripper':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
-                GRIPPER_HANDLER.start_opening()
+                GRIPPER_HANDLER.start_opening_fingers()
                 current_action.start()
                 TRAJECTORY_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
                 TRAJECTORY_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
@@ -283,7 +294,7 @@ def act_on_current_action(current_action, pose_error):
         elif current_action.action_type == 'close_gripper':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
-                GRIPPER_HANDLER.start_closing()
+                GRIPPER_HANDLER.start_closing_fingers()
                 current_action.start()
                 TRAJECTORY_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
                 TRAJECTORY_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
@@ -291,29 +302,37 @@ def act_on_current_action(current_action, pose_error):
                 TRAJECTORY_TRACKER.clear_error_integrals()
                 started = True
 
+            if DISPLAY is not None:
+                DISPLAY.update_led_state([255,125,0],1)
+
         elif current_action.action_type == 'change_platforms':
             config.TRACKED_MARKER_ID = current_action.to_platform_id
             ACTIVE_CONTROLLER = OPEN_LOOP_CONTROL_SELECTOR
             LAST_TRACKED_MARKER_TIME = None
             TRAJECTORY_TRACKER.clear_error_integrals()
+            SET_TRACKED_BUNDLE_IDS_PROXY(
+                tracked_bundle_ids=[current_action.to_platform_id]
+            )
 
             if DISPLAY is not None:
                 DISPLAY.update_led_state([255,255,0],1)
             current_action.start()
             started = True
+
         elif current_action.action_type == 'move':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
-
             if DISPLAY is not None:
                 DISPLAY.update_led_state([255,0,255],1)
             current_action.start()
             started = True
+
         elif current_action.action_type == 'binary_P_move':
             ACTIVE_CONTROLLER = BINARY_P_CONTROL_SELECTOR
             if DISPLAY is not None:
                 DISPLAY.update_led_state([255,0,0],1)
             current_action.start()
             started = True
+
         elif current_action.action_type == 'move_wrist':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if DISPLAY is not None:
@@ -330,7 +349,7 @@ def act_on_current_action(current_action, pose_error):
             rospy.loginfo("Starting action: {}".format(current_action))
     else:
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
-            rospy.loginfo("Completed action: {}. Error: {}".format(current_action, pose_error))
+            rospy.loginfo("Completed action: {}. Error: {}. Tolerance {}".format(current_action, pose_error, current_action.pose_tolerance))
 
             if len(ACTIONS) > 0:
                 return True, ACTIONS.pop(0)
@@ -352,6 +371,22 @@ def update_active_controller(current_action):
         raise Exception("Unrecognized active control selector!")
 
 
+def publish_current_build_phase(current_action, started, current_location):
+    info_message = droplet_underwater_assembly.msg.BuildPhase()
+    info_message.header.stamp = rospy.Time.now()
+    info_message.switched_this_frame = started
+    info_message.current_action_is_started = current_action.is_started
+    info_message.current_action = str(current_action)
+    info_message.active_build_step = current_action.high_level_build_step
+    info_message.goal_location = current_action.goal_pose
+    info_message.current_location = current_location
+    info_message.current_action_type = current_action.action_type
+    info_message.move_tolerance = current_action.pose_tolerance
+    info_message.action_sequence_id = current_action.sequence_id
+
+    BUILD_PHASE_PUBLISHER.publish(info_message)
+
+
 def run_build_plan(rc_override_publisher):
     global latest_imu_message, VELOCITY_HISTORY, RUNNING_EXPERIMENT, LAST_ERROR_DISPLAY
 
@@ -367,12 +402,20 @@ def run_build_plan(rc_override_publisher):
     if not DRY_RUN:
         utils.set_motor_arming(True)
         rospy.loginfo("Motors armed.")
+        GRIPPER_HANDLER.start_opening_fingers()
 
     start_time = datetime.datetime.now()
+    number_actions = len(ACTIONS)
     current_action = ACTIONS.pop(0)
 
     while ((datetime.datetime.now() - start_time).total_seconds() < float(config.EXPERIMENT_MAX_DURATION_SECONDS)) and not rospy.is_shutdown():
         RUNNING_EXPERIMENT = True
+
+        # checking if tag has been seen
+        if (rospy.Time.now() - LATEST_MARKER_MESSAGE.header.stamp).to_sec() > config.MARKER_LOSS_TIME:
+            rospy.logerr("No marker message gotten for {} seconds. Terminating!".format(config.MARKER_LOSS_TIME))
+            break
+
         loop_start = rospy.Time.now()
 
         update_active_controller(current_action)
@@ -390,7 +433,7 @@ def run_build_plan(rc_override_publisher):
             raise Exception("Unrecognized active control selector!")
         if DISPLAY is not None:
             if LAST_ERROR_DISPLAY is None or (rospy.Time.now() - LAST_ERROR_DISPLAY).to_sec() > ERROR_DISPLAY_RATE:
-                DISPLAY.update_lcd_display("{:0.2f} {:0.2f} {:0.2f}".format(*pose_error[0:3]), "{:0.2f} {:0.2f} {:0.2f}".format(*pose_error[3:6]))
+                DISPLAY.update_lcd_display("{} / {}".format(current_action.sequence_id, number_actions), "{:0.1f} {:0.1f} {:0.2f}".format(*pose_error[3:6]))
                 LAST_ERROR_DISPLAY = rospy.Time.now()
 
         changed = False
@@ -398,6 +441,12 @@ def run_build_plan(rc_override_publisher):
 
         if changed:
             update_active_controller(current_action)
+
+        publish_current_build_phase(
+            current_action,
+            changed,
+            get_robot_pose_xyzrpy()
+        )
 
         if current_action.is_started and current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME) and len(ACTIONS) == 0:
             rospy.loginfo("Completed all actions! Terminating")
@@ -413,7 +462,6 @@ def run_build_plan(rc_override_publisher):
             raise Exception("Unrecognized active control selector!")
 
         GRIPPER_HANDLER.update()
-        GRIPPER_HANDLER.mix_into_rc_override_message(go_message)
 
         utils.terminate_if_unsafe(go_message, 150, DRY_RUN)
         rc_override_publisher.publish(go_message)
@@ -450,8 +498,105 @@ def wait_for_marker_data():
         poll_rate.sleep()
 
 
+def construct_tolerance_motion_experiment(cube_dimensions, cube_center, n_samples_per_tol, tol_step, tol_range, cutoff_seconds):
+    actions = []
+
+    initial_tolerance = [
+        tol_range[1],
+        tol_range[1],
+        0.03,
+        1000.0,
+        1000.0,
+        0.017
+    ]
+
+    tol_samples = []
+
+    n_tolerance_steps = int((tol_range[1] - tol_range[0]) / tol_step)
+
+    for tol_step_x in range(n_tolerance_steps):
+        for tol_step_y in range(n_tolerance_steps):
+            tol_samples.append(
+                [
+                    initial_tolerance[0] - float(tol_step_x) * tol_step,
+                    initial_tolerance[1] - float(tol_step_y) * tol_step,
+                    initial_tolerance[2],
+                    initial_tolerance[3],
+                    initial_tolerance[4],
+                    initial_tolerance[5],
+                ]
+            )
+
+    rospy.loginfo("Sampling {} tolerances".format(tol_samples))
+
+    goal_moves_with_tol = []
+    
+    pt_1 = list(cube_center)
+    pt_1[1] = pt_1[1] + 0.20
+    pt_2 = list(cube_center)
+    pt_2[0] = pt_2[0] + 0.20
+
+    move_triangle = [
+        cube_center,
+        pt_1,
+        pt_2
+    ]
+
+    assert(n_samples_per_tol == 3)
+    for sample in tol_samples:
+        for goal_idx in range(n_samples_per_tol):
+            next_point = move_triangle[goal_idx]
+
+            goal_move = [
+                next_point[0],
+                next_point[1],
+                next_point[2],
+                0.0,
+                0.0,
+                0.0,
+            ]
+
+            goal_moves_with_tol.append(
+                (goal_move, sample)
+            )
+
+    rospy.loginfo("Number moves {}".format(len(goal_moves_with_tol)))
+    new_action = assembly_action.AssemblyAction(
+        action_type="move",
+        goal_pose=[move_triangle[2][0], move_triangle[2][1], move_triangle[2][2], 0.0, 0.0, 0.0],
+        pose_tolerance=initial_tolerance,
+        position_hold_time=6.0
+    )
+
+    for move, tol in goal_moves_with_tol:
+        new_action = assembly_action.AssemblyAction(
+            action_type="move",
+            goal_pose=move,
+            pose_tolerance=tol,
+            position_hold_time=6.0
+        )
+
+        actions.append(new_action)
+
+        new_action = assembly_action.AssemblyAction(
+            action_type="move",
+            goal_pose=move,
+            pose_tolerance=tol,
+            position_hold_time=0.0
+        )
+
+        new_action.timeout = cutoff_seconds
+        actions.append(new_action)
+
+    for idx, action in enumerate(actions):
+        action.high_level_build_step = "TOL_SAMPLING"
+        action.sequence_id = idx
+
+    return actions
+
+
 def main():
-    global PLATFORMS, ACTIONS, DRY_RUN, goal_pose_publisher, transform_broadcaster
+    global PLATFORMS, ACTIONS, DRY_RUN, goal_pose_publisher, transform_broadcaster, BUILD_PHASE_PUBLISHER
     rospy.init_node("droplet_underwater_assembly")
 
     marker_subscriber = rospy.Subscriber(
@@ -477,6 +622,12 @@ def main():
     goal_pose_publisher = rospy.Publisher(
         config.GOAL_POSE_TOPIC,
         geometry_msgs.msg.PoseStamped,
+        queue_size=1
+    )
+
+    BUILD_PHASE_PUBLISHER = rospy.Publisher(
+        config.BUILD_PHASE_TOPIC,
+        droplet_underwater_assembly.msg.BuildPhase,
         queue_size=1
     )
 
@@ -510,6 +661,15 @@ def main():
         start_platform=config.TRACKED_MARKER_ID,
     )
 
+    #ACTIONS = construct_tolerance_motion_experiment(
+    #    cube_dimensions=[0.5,0.5,0.5,0.15],
+    #    cube_center=[-1.6, -0.3, -0.3, 0.0],
+    #    n_samples_per_tol=3,
+    #    tol_step=0.0025,
+    #    tol_range=[0.0075,0.03],
+    #    cutoff_seconds=90.0
+    #)
+
     rospy.loginfo("Actions to complete:")
     for idx, action in enumerate(ACTIONS):
         rospy.loginfo("    {}: {}".format(idx, action))
@@ -525,6 +685,13 @@ def main():
 
     for action in ACTIONS:
         action.gripper_handler = GRIPPER_HANDLER
+        
+        if action.high_level_build_step is None:
+            raise Exception("Action {} is not associated with a high level build step!".format(action))
+
+    SET_TRACKED_BUNDLE_IDS_PROXY(
+        tracked_bundle_ids=[config.TRACKED_MARKER_ID]
+    )
 
     run_build_plan(
         rc_override_publisher

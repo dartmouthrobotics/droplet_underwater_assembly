@@ -5,119 +5,93 @@ import config
 
 class GripperHandler(object):
     def __init__(self):
-        self.toggle_time_seconds = 3.0 
-        self.channel = 8
-        self.toggle_pwm = 50
-        self.close_time_addon = 0.5
-        self.rotation_rate = 1 # 1 pwm per frame
-
-        self.toggle_start_time = None
-
-        # zero means not moving, less than zero means closing, more than zero means opening.
         self.move_direction = 0
 
-        self.wrist_rotation_increment_per_frame_pwm = 2
+        self.current_rotation_position = 1500
+        self.desired_rotation_position = config.WRIST_ROTATION_INITIAL
 
-        # gripper starts aligned with robot body
-        self.current_rotation_position = config.GRIPPER_ROTATION_INITIAL
-        self.desired_rotation_position = config.GRIPPER_ROTATION_INITIAL
+        self.desired_finger_position = config.FINGER_POSITION_INITIAL
+        self.current_finger_position = config.FINGER_POSITION_INITIAL
 
-        self.gripper_rotation_service_proxy = rospy.ServiceProxy("/mavros/cmd/command", mavros_msgs.srv.CommandLong)
+        self.servo_command_proxy = rospy.ServiceProxy("/mavros/cmd/command", mavros_msgs.srv.CommandLong)
 
-        self.wrist_min_pwm = 900
-        self.wrist_max_pwm = 1600
-        self.wrist_update_pause_seconds = 0.1
         self.last_wrist_update_time = None
+        self.last_fingers_update_time = None
+        self.tick_rate = 0.05
 
     def rotate_to_position(self, rotation_position):
         self.desired_rotation_position = rotation_position
 
-    @property
-    def is_toggling(self):
-        return self.toggle_start_time is not None
+    def start_opening_fingers(self):
+        self.desired_finger_position = config.FINGER_OPEN_POSITION
 
-    def move_gripper_blocking(self, rc_override_publisher, direction):
-        if direction == 1:
-            self.start_opening()
-        elif direction == -1:
-            self.start_closing()
-        else:
-            raise Exception("Inalid gripper direction!")
+    def start_closing_fingers(self):
+        self.desired_finger_position = config.FINGER_CLOSED_POSITION
 
-        poll_rate = rospy.Rate(1)
-        while self.is_toggling:
-            self.update()
-            move_gripper_message = utils.construct_stop_rc_message()
-            self.mix_into_rc_override_message(move_gripper_message)
+    def move_servo_one_tick(self, desired_position, current_position, last_update_time, servo_index, move_rate):
+            if last_update_time is not None:
+                time_since_last_update = (rospy.Time.now() - last_update_time).to_sec()
+            else:
+                time_since_last_update = float("inf")
 
-            for channel in move_gripper_message.channels:
-                assert(abs(1500 - channel) < 100)
+            next_position = current_position
+            updated = False
 
-            rc_override_publisher.publish(move_gripper_message)
-            poll_rate.sleep()
+            update_time = last_update_time
+            if time_since_last_update > self.tick_rate:
+                if current_position < desired_position:
+                    next_position = min(next_position + move_rate, desired_position)
+                    updated = True
+
+                elif current_position > desired_position:
+                    next_position = max(next_position - move_rate, desired_position)
+                    updated = True
+
+                update_time = rospy.Time.now()
+
+            if updated:
+                self.publish_servo_position(servo_index=servo_index, position=next_position)
+
+            return next_position, update_time
+
 
     def update(self):
-        if self.desired_rotation_position is not None:
-            time_since_last_wrist_update = float("inf")
-
-            if self.last_wrist_update_time is not None:
-                time_since_last_wrist_update = (rospy.Time.now() - self.last_wrist_update_time).to_sec()
-
-            if time_since_last_wrist_update > self.wrist_update_pause_seconds:
-                if self.desired_rotation_position < self.current_rotation_position:
-                    self.current_rotation_position = self.current_rotation_position - self.wrist_rotation_increment_per_frame_pwm
-                    self.publish_gripper_rotation_position(self.current_rotation_position)
-                    self.last_wrist_update_time = rospy.Time.now()
-
-                elif self.desired_rotation_position > self.current_rotation_position:
-                    self.current_rotation_position = self.current_rotation_position + self.wrist_rotation_increment_per_frame_pwm
-                    self.publish_gripper_rotation_position(self.current_rotation_position)
-                    self.last_wrist_update_time = rospy.Time.now()
-
-        if self.toggle_start_time is None and self.move_direction == 0:
-            return
-
-        current_time = rospy.Time.now()
-
-        toggle_time_addon = 0.0
-        if self.move_direction == -1:
-            toggle_time_addon = self.close_time_addon
-
-        if (current_time - self.toggle_start_time).to_sec() > self.toggle_time_seconds + toggle_time_addon:
-            rospy.loginfo("Completed moving gripper.")
-            self.move_direction = 0
-            self.toggle_start_time = None
-
-    def publish_gripper_rotation_position(self, position):
-        if self.current_rotation_position < config.MIN_WRIST_PWM or self.current_rotation_position > config.MAX_WRIST_PWM:
-            raise Exception("Error attempting to rotate to an invalid wrist pwm: {}. Valid range is: ({},{})".format(self.current_rotation_position, config.MIN_WRIST_PWM, config.MAX_WRIST_PWM))
-
-        self.gripper_rotation_service_proxy(
-            broadcast=False,
-            command=183,
-            confirmation=0,
-            param1=0,
-            param2=self.current_rotation_position
+        self.current_rotation_position, self.last_wrist_update_time = self.move_servo_one_tick(
+            desired_position=self.desired_rotation_position,
+            current_position=self.current_rotation_position,
+            last_update_time=self.last_wrist_update_time,
+            servo_index=config.WRIST_SERVO_INDEX,
+            move_rate=config.WRIST_ROTATION_RATE_PWM_PER_TICK
         )
 
-    def start_opening(self):
-        if self.is_toggling:
-            rospy.logwarn("Cannot start opening the gripper. It is already moving!")
-            return
+        # open instantly but close slowly
+        finger_move_rate = config.FINGER_CLOSE_RATE_PWM_PER_TICK
+        if self.current_finger_position < self.desired_finger_position:
+            finger_move_rate = config.FINGER_OPEN_RATE_PWM_PER_TICK
 
-        self.toggle_start_time = rospy.Time.now()
-        self.move_direction = 1
+        self.current_finger_position, self.last_fingers_update_time = self.move_servo_one_tick(
+            desired_position=self.desired_finger_position,
+            current_position=self.current_finger_position,
+            last_update_time=self.last_fingers_update_time,
+            servo_index=config.FINGER_SERVO_INDEX,
+            move_rate=finger_move_rate
+        )
 
-    def start_closing(self):
-        if self.is_toggling:
-            rospy.logwarn("Cannot start closing the gripper. It is already moving!")
-            return
+    def publish_servo_position(self, position, servo_index):
+        if position < config.MIN_SERVO_PWM or position > config.MAX_SERVO_PWM:
+            raise Exception("Invalid servo position given! Range is {}-{} given position is {}".format(
+                config.MIN_SERVO_PWM,
+                config.MAX_SERVO_PWM,
+                position
+            ))
 
-        self.toggle_start_time = rospy.Time.now()
-        self.move_direction = -1
-
-    def mix_into_rc_override_message(self, rc_override_message):
-        rc_override_message.channels[self.channel] = 1500 + (self.move_direction * self.toggle_pwm) # the new chip I soldered reverses the meaning of the sign
+        self.servo_command_proxy(
+            broadcast=False,
+            command=config.MAV_CMD_DO_SET_SERVO,
+            confirmation=0,
+            param1=servo_index,
+            param2=position
+        )
 
     def close_gripper_blocking(self, rc_override_publisher):
         self.move_gripper_blocking(rc_override_publisher, -1)

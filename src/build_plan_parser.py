@@ -2,7 +2,29 @@ import numpy
 import config
 import assembly_action
 import rospy
+import config
+import random
 
+
+def displace_point_randomly(point, xyzyaw_range):
+    assert(len(xyzyaw_range) == 4)
+
+    return [
+        point[0] + random.uniform(
+            -xyzyaw_range[0], xyzyaw_range[0]
+        ),
+        point[1] + random.uniform(
+            -xyzyaw_range[1], xyzyaw_range[1]
+        ),
+        point[2] + random.uniform(
+            -xyzyaw_range[2], xyzyaw_range[2]
+        ),
+        point[3],
+        point[4],
+        point[5] + random.uniform(
+            -xyzyaw_range[3], xyzyaw_range[3]
+        ),
+    ]
 
 class BuildPlanParser(object):
     def __init__(self, build_platforms, high_offset, mid_low_offset):
@@ -65,7 +87,10 @@ class BuildPlanParser(object):
 
         platform = self.platforms_by_id[platform_id]
 
-        center_back_pose = platform.center_back_pose
+        center_back_pose = list(platform.center_back_pose)
+
+        if config.RANDOMLY_DISPLACE_CENTER_BACK:
+            center_back_pose = displace_point_randomly(center_back_pose, config.RANDOM_DISPLACEMENT_RANGE)
 
         from_slot_low = platform.get_slot_coordinates(slot_coords)
         from_slot_mid_low = list(from_slot_low)
@@ -75,7 +100,7 @@ class BuildPlanParser(object):
         from_slot_high[2] = from_slot_high[2] + self.high_offset
 
         center_back_to_pickup_intermediates = self.get_intermediate_move_actions(
-            platform.center_back_pose,
+            center_back_pose,
             from_slot_high,
             1.0,
             config.ULTRA_COARSE_POSE_TOLERANCE
@@ -83,12 +108,12 @@ class BuildPlanParser(object):
 
         pickup_to_center_back_intermediates = self.get_intermediate_move_actions(
             from_slot_high,
-            platform.center_back_pose,
+            center_back_pose,
             1.0,
             config.ULTRA_COARSE_POSE_TOLERANCE
         )
 
-        actions.append(assembly_action.AssemblyAction('move', platform.center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE))
+        actions.append(assembly_action.AssemblyAction('move', center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE))
         actions.extend(center_back_to_pickup_intermediates)
         actions.append(assembly_action.AssemblyAction('move', from_slot_high, config.COARSE_POSE_TOLERANCE))
         actions.append(assembly_action.AssemblyAction('move', from_slot_mid_low, config.COARSE_POSE_TOLERANCE))
@@ -96,7 +121,7 @@ class BuildPlanParser(object):
         actions.append(assembly_action.AssemblyAction('close_gripper', from_slot_low, config.TIGHT_POSE_TOLERANCE))
         actions.append(assembly_action.AssemblyAction('move', from_slot_high, config.COARSE_POSE_TOLERANCE))
         actions.extend(pickup_to_center_back_intermediates)
-        actions.append(assembly_action.AssemblyAction('move', platform.center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE))
+        actions.append(assembly_action.AssemblyAction('move', center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE))
 
         return actions
 
@@ -109,7 +134,10 @@ class BuildPlanParser(object):
 
         platform = self.platforms_by_id[platform_id]
 
-        center_back_pose = platform.center_back_pose
+        center_back_pose = list(platform.center_back_pose)
+
+        if config.RANDOMLY_DISPLACE_CENTER_BACK:
+            center_back_pose = displace_point_randomly(center_back_pose, config.RANDOM_DISPLACEMENT_RANGE)
 
         to_slot_low = platform.get_slot_coordinates(slot_coords)
         to_slot_mid_low = list(to_slot_low)
@@ -119,7 +147,7 @@ class BuildPlanParser(object):
         to_slot_high[2] = to_slot_high[2] + self.high_offset
 
         center_back_to_drop_intermediates = self.get_intermediate_move_actions(
-            platform.center_back_pose,
+            center_back_pose,
             to_slot_high,
             1.0,
             config.ULTRA_COARSE_POSE_TOLERANCE
@@ -127,7 +155,7 @@ class BuildPlanParser(object):
 
         drop_to_center_back_intermediates = self.get_intermediate_move_actions(
             to_slot_high,
-            platform.center_back_pose,
+            center_back_pose,
             1.0,
             config.ULTRA_COARSE_POSE_TOLERANCE
         )
@@ -139,7 +167,7 @@ class BuildPlanParser(object):
         actions.append(assembly_action.AssemblyAction('open_gripper', to_slot_mid_low, config.TIGHT_POSE_TOLERANCE))
         actions.append(assembly_action.AssemblyAction('move', to_slot_high, config.COARSE_POSE_TOLERANCE))
         actions.extend(drop_to_center_back_intermediates)
-        actions.append(assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE))
+        actions.append(assembly_action.AssemblyAction('move', center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE))
 
         return actions
 
@@ -148,7 +176,6 @@ class BuildPlanParser(object):
         parsed_actions = []
 
         current_platform = start_platform
-        print start_platform
 
         holding_block = False
         last_pose = None
@@ -157,6 +184,7 @@ class BuildPlanParser(object):
             file_lines = file_stream.readlines()
 
             for line_number, line in enumerate(file_lines):
+                print line
                 line = line.strip()
                 command = line.split(';')[0]
 
@@ -175,17 +203,23 @@ class BuildPlanParser(object):
                         if next_platform_id != current_platform:
                             # switch platform
                             next_action = assembly_action.AssemblyAction.construct_change_platforms(next_platform_id)
-                            print "CHANGE"
-                            print next_action
+                            next_action.high_level_build_step = line
                             parsed_actions.append(next_action)
                             current_platform = next_platform_id
+                            next_action = assembly_action.AssemblyAction('binary_P_move', self.platforms_by_id[current_platform].center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE)
+                            next_action.high_level_build_step = line
+                            parsed_actions.append(next_action)
 
                         # add the actions to move to the point and then close the gripper
+                        actions_to_pick_up_block = self.get_actions_to_pick_up_block(
+                            current_platform,
+                            (x_coord, y_coord, z_coord)
+                        )
+                        for action in actions_to_pick_up_block:
+                            action.high_level_build_step = line
+
                         parsed_actions.extend(
-                            self.get_actions_to_pick_up_block(
-                                current_platform,
-                                (x_coord, y_coord, z_coord)
-                            )
+                            actions_to_pick_up_block
                         )
                         last_pose = parsed_actions[-1].goal_pose 
 
@@ -202,15 +236,25 @@ class BuildPlanParser(object):
 
                         if next_platform_id != current_platform:
                             # switch platform
-                            next_action = assembly_action.AssemblyAction.construct_change_platforms(next_platform_id),
+                            next_action = assembly_action.AssemblyAction.construct_change_platforms(next_platform_id)
+                            next_action.high_level_build_step = line
                             current_platform = next_platform_id
+                            parsed_actions.append(next_action)
+
+                            next_action = assembly_action.AssemblyAction('binary_P_move', self.platforms_by_id[current_platform].center_back_pose, config.ULTRA_COARSE_POSE_TOLERANCE)
+                            next_action.high_level_build_step = line
+                            parsed_actions.append(next_action)
 
                         # add the actions to move to the point and then open the gripper
+                        actions_to_drop_block = self.get_actions_to_drop_block(
+                            current_platform,
+                            (x_coord, y_coord, z_coord)
+                        )
+                        for action in actions_to_drop_block:
+                            action.high_level_build_step = line
+
                         parsed_actions.extend(
-                            self.get_actions_to_drop_block(
-                                current_platform,
-                                (x_coord, y_coord, z_coord)
-                            )
+                            actions_to_drop_block
                         )
 
                         last_pose = parsed_actions[-1].goal_pose 
@@ -230,7 +274,9 @@ class BuildPlanParser(object):
                         parsed_actions.append(
                             assembly_action.AssemblyAction('move', target_location, config.COARSE_POSE_TOLERANCE)
                         )
+                        parsed_actions[-1].high_level_build_step = line
                         last_pose = parsed_actions[-1].goal_pose 
+                        parsed_actions[-1].high_level_build_step = line
 
                     elif command.startswith("ROTATE_WRIST"):
                         # add a rotate wrist command
@@ -248,7 +294,11 @@ class BuildPlanParser(object):
                                 pose=target_pose
                             )
                         )
+                        parsed_actions[-1].high_level_build_step = line
                     else:
                         raise Exception("Unrecognized command in line {}: {}".format(line_number, line))
+
+        for idx, action in enumerate(parsed_actions):
+            action.sequence_id = idx
 
         return parsed_actions

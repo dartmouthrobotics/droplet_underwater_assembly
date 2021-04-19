@@ -268,7 +268,7 @@ class OpenLoopTracker(PIDTracker):
             **kwargs
         )
         self.pulse_on_z_thrust = 0.6
-        self.pulse_on_yaw_thrust = 0.5
+        self.pulse_on_yaw_thrust = -0.5
 
         self.on_time_ratio = 0.7
         self.cycle_time = 2.0

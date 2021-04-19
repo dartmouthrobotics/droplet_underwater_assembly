@@ -9,7 +9,7 @@ class AssemblyAction(object):
 
     @classmethod
     def construct_rotate_wrist(cls, pwm, pose):
-        if pwm > config.MAX_WRIST_PWM or pwm < config.MIN_WRIST_PWM:
+        if pwm > config.MAX_SERVO_PWM or pwm < config.MIN_SERVO_PWM:
             raise Exception(
                 "Given wrist rotation {pwm} is out of the valid range: ({min}, {max})".format(
                     pwm=pwm,
@@ -20,18 +20,23 @@ class AssemblyAction(object):
 
         return cls('move_wrist', pose, [1.0] * 6, wrist_rotation_pwm=pwm)
 
-    def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=6.0, **kwargs):
+    def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=config.DEFAULT_POSITION_HOLD_TIME, **kwargs):
         self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
         self.reached_goal_time = None
+        self.high_level_build_step = None
 
         self.position_hold_time = position_hold_time
 
         self.gripper_hold_time = config.GRIPPER_HOLD_TIME
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
+
+        self.sequence_id = 0
+
+        self.timeout = None
 
         if self.action_type == 'move_wrist':
             if 'wrist_rotation_pwm' not in kwargs:
@@ -65,6 +70,9 @@ class AssemblyAction(object):
         if self.action_type == "move_wrist":
             return "Rotate wrist to {}".format(self.wrist_rotation_pwm)
 
+        if self.action_type == "binary_P_move":
+            return "Coarse grained recenter to {}".format(self.goal_pose)
+
         else:
             raise Exception("__str__ not implemented for assembly actions of type {}".format(self.action_type))
 
@@ -80,6 +88,10 @@ class AssemblyAction(object):
             rospy.logerr("Cannot complete an action that hasn't been started.")
             return False
 
+        if self.timeout is not None and (rospy.Time.now() - self.start_time).to_sec() > self.timeout:
+            rospy.logerr("Action timed out!")
+            return True
+
         if self.action_type == 'move':
             if self.reached_goal_time is None:
                 reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
@@ -92,8 +104,9 @@ class AssemblyAction(object):
                 return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
 
         if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
-            elapsed_seconds = (rospy.Time.now() - self.start_time).to_sec()
-            complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
+            #elapsed_seconds = (rospy.Time.now() - self.start_time).to_sec()
+            #complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
+            complete = self.gripper_handler.current_finger_position == self.gripper_handler.desired_finger_position
 
             return complete
 
