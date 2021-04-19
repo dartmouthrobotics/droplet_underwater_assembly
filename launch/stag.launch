@@ -3,7 +3,7 @@
 <launch>
   <arg name="standalone" default="false" doc="if this is set to the string true, does not spawn a nodelet manager. Otherwise it does."/>
 
-  <group if="$(arg spinnaker)">
+  <group if="$(arg acquisition)">
     <include file="$(find droplet_underwater_assembly)/description.launch" />
 
     <include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
