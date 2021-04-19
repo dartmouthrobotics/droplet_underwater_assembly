@@ -1,0 +1,10 @@
+Header header
+string current_action
+string active_build_step
+bool switched_this_frame
+bool current_action_is_started
+string current_action_type
+float64[] current_location
+float64[] goal_location
+float64[] move_tolerance
+int64 action_sequence_id
