@@ -7,6 +7,10 @@ import math
 import scipy.stats
 import matplotlib.ticker as mtick
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "sans",
+    "font.sans-serif": ["Bitstream Vera"]})
 
 
 half_side_length = (3.3 * 0.0254) / 2.0
@@ -83,58 +87,78 @@ def get_prob_at_point(x,y,std_x,std_y,secs,framerate,cov=None):
     cov_matrix = np.array([[std_x*std_x,  0.0], [0.0,   std_y*std_y]])
     if cov is not None:
         cov_matrix = cov
+
     mean = [x,y]
     test, l = scipy.integrate.nquad(integrand, ranges=[[-0.012, 0.012], [-0.012, 0.012]], args=(mean, cov_matrix))
-    return min(math.pow(framerate * secs * test, 2), 1.0)
+
+    return test
 
 
-x_samples = np.linspace(0.000001, 0.012, 100)
+#x_samples = np.linspace(0.000001, 0.012, 100)
 ax.legend()
 
-cov_from_experiment = np.array([[1.55111170e-07,-3.19329906e-07], [ -3.19329906e-07,1.11090570e-05]])
+cov_from_experiment = np.array([[4.32117434e-07,9.90958912e-07], [9.90958912e-07,2.71886186e-05]])
 
-angles = np.linspace(0.0, 2*math.pi, 100)
-worst = float("-inf")
-for angle in angles:
-    r = 0.042
-    x = math.cos(angle) * r
-    y = math.sin(angle) * r
+r_real = 0.042
 
-    p = get_prob_at_point(x=x,y=y,std_x=0,std_y=0.0,secs=10.0,framerate=30.0,cov=cov_from_experiment)
-    print(x, y, p)
+num_r_samples = 250
+r_samples = np.linspace(0.01, 0.045, num_r_samples)
+worsts = []
 
-    if p > worst:
-        worst = p
+def get_worst_case_prob(r):
+    worst = float("-inf")
+    worst_angle = 0.0
+    angles = np.linspace(0.0, math.pi, 75)
+    for angle in angles:
+        x = math.cos(angle) * r
+        y = math.sin(angle) * r
 
-print("Worst", p)
-    #print(get_prob_at_point(0.000,0.042,0.0,0.0,10.0,30.0,cov_from_experiment))
+        p = get_prob_at_point(x=x,y=y,std_x=0,std_y=0.0,secs=10.0,framerate=30.0,cov=cov_from_experiment)
 
-y_samples = []
-for idx, x_sample in enumerate(x_samples):
-    sys.stdout.write("{}/{}\r".format(idx,len(x_samples)))
-    sys.stdout.flush()
+        if p > worst:
+            worst_angle = angle
+            worst = p
 
-    y_samples.append(
-        get_prob_at_point(0.042, 0.0, x_sample, std_y,10.0,30.0)
-    )
+    print("  p: {} at {}".format(worst, worst_angle))
+    return worst
 
-line_min = 0.0
-for x_sam, y_sam in zip(x_samples, y_samples):
-    if y_sam > 0.01:
-        line_min = x_sam
-        break
-    
+for idx, r in enumerate(r_samples):
+    print("r = {} ({}/{})".format(r, idx+1, num_r_samples))
+    worst = get_worst_case_prob(r)
 
-ax.set_xlabel("meters")
-ax.set_xlabel("meters")
-axs[1].plot(x_samples, y_samples, label="False positive prob.")
-axs[1].xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-axs[1].xaxis.set_major_locator(mtick.MultipleLocator(0.005))
-axs[1].axvline(line_min, c="red", linestyle="dashed", label="P > 1%")
-axs[1].set_xlabel("X Standard Deviation")
-axs[1].set_title("(b)")
-ax.set_title("(a)")
-axs[1].legend()
+    worsts.append(worst)
+
+#plt.plot(r_samples, worsts)
+#plt.axvline(0.042, c="r")
+#
+#y_samples = []
+#for idx, x_sample in enumerate(x_samples):
+#    sys.stdout.write("{}/{}\r".format(idx,len(x_samples)))
+#    sys.stdout.flush()
+#
+#    y_samples.append(
+#        get_prob_at_point(0.042, 0.0, x_sample, std_y,10.0,30.0)
+#    )
+#
+#line_min = 0.0
+#for x_sam, y_sam in zip(x_samples, y_samples):
+#    if y_sam > 0.01:
+#        line_min = x_sam
+#        break
+def non_increasing(L):
+    return all(x>=y for x, y in zip(L, L[1:]))    
+
+print("Worst samples nonincreasing? {}".format(non_increasing(worsts)))
+ax.set_xlabel("Meters")
+ax.set_xlabel("Meters")
+axs[1].plot(r_samples, worsts, label="$P(\\mathcal{{E}} | \Sigma)$")
+#axs[1].xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+#axs[1].xaxis.set_major_locator(mtick.MultipleLocator(0.005))
+axs[1].axvline(r_real, color="r", linestyle="dashed", label="$r=0.042$ $P(\\mathcal{{E}} | \Sigma)={:.0e}$".format(get_worst_case_prob(r_real)))
+axs[1].set_xlabel("r (meters)")
+axs[1].set_title("\\textbf{(b)}")
+ax.set_title("\\textbf{(a)}")
+axs[1].legend(loc="upper right")
 fig.tight_layout()
 
 fig.savefig("acceptance_area_probability_false_positive_plot.pdf")

@@ -13,6 +13,8 @@
 
   <include file="$(find droplet_underwater_assembly)/stag.launch"/>
 
+  <include file="$(find  mini_ahrs_ros)/launch/mini_ahrs_standalone.launch"/>
+
   <group unless="$(arg test)">
     <include file="$(find droplet_underwater_assembly)/apm.launch" />
 
@@ -24,17 +26,13 @@
       <arg name="exposure_time" value="8100"/>
     </include>
 
-    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/droplet_underwater_assembly/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /tf /tf_static /mavros/rc/override /mavros/imu/data_raw /imu/data /mavros/imu/data /goal_pose /droplet_underwater_assembly/build_phase"></node>
+        <!--<node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/catkin-workspace/install/share/droplet_underwater_assembly/static_assets/ /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /camera_array/cam0/image_raw/compressed /tf /tf_static /mavros/rc/override /mavros/imu/data_raw /imu/data /mavros/imu/data /goal_pose /droplet_underwater_assembly/build_phase"></node>-->
 
   </group>
-
-  <node pkg="imu_complementary_filter" type="complementary_filter_node" name="complementary_filter" required="true">
-      <remap from="/imu/data_raw" to="/mavros/imu/data_raw"/>
-  </node>
 
   <node pkg="droplet_underwater_assembly" output="screen" respawn="false" type="assembly_main.py" name="assembly_main_node" required="true"> 
     <param name="dry_run" type="bool" value="$(arg dry_run)" unless="$(arg test)"/>
     <param name="dry_run" type="bool" value="true" if="$(arg test)"/>
-    <param name="build_plan_file" type="string" value="$(find droplet_underwater_assembly)/param/build_plan_50_block_repeatability.txt"/>
-  </node>
+<param name="build_plan_file" type="string" value="$(find droplet_underwater_assembly)/param/build_plan.txt"/>
+</node>
 </launch>

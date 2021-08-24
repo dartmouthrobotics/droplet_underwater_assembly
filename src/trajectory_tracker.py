@@ -57,7 +57,7 @@ class PIDTracker(object):
 
         self.max_motor_speed = 100
 
-        self.yaw_factor =   [0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+        self.yaw_factor =   [0.0, -1.0, 1.0, -1.0, 0.0, 0.0, 0.0, -1.0]
         self.x_factor =     [0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
         self.y_factor =     [0.0,  0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0]
 

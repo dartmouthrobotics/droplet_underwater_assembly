@@ -54,6 +54,7 @@ def get_surprising_drop_results(csv_file, height_selector):
 
     current_y_val = 1
 
+    num_surprising = 0
     rows = []
     for y_val, y_val_data in itertools.groupby(data_9_75_in, lambda r: r[0][1]):
         row = []
@@ -73,6 +74,11 @@ def get_surprising_drop_results(csv_file, height_selector):
             surprise_0 = is_surprising(x_coord_trial_0,y_coord_trial_0,data[0][1])
             surprise_1 = is_surprising(x_coord_trial_1,y_coord_trial_1,data[1][1])
 
+            if surprise_0:
+                num_surprising = num_surprising + 1
+            if surprise_1:
+                num_surprising = num_surprising + 1
+
             x_result = None
             if surprise_0 and not surprise_1:
                 x_result = yes_no_to_float(data[0][1])
@@ -90,6 +96,7 @@ def get_surprising_drop_results(csv_file, height_selector):
 
         rows.append(row)
 
+    print(height_selector, num_surprising)
     return rows
 
 data_exp = []

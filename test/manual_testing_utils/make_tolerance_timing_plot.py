@@ -28,6 +28,10 @@ for tol, messages_for_tol in itertools.groupby(messages, key=lambda x: x.move_to
     time_at_tol = (last.header.stamp - first_message.header.stamp).to_sec()
     time_averaged.append(([tol[0], tol[1]], time_at_tol))
 
+print("Standard deviation of triangle circuit times:", numpy.std([x[1] for x in time_averaged]))
+print("Min time:", min([x[1] for x in time_averaged]))
+print("Max time:", max([x[1] for x in time_averaged]))
+
 time_in_rows = []
 
 x_vals = []

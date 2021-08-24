@@ -3,6 +3,7 @@ import collections
 import rospy
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import math
 
@@ -144,6 +145,34 @@ for key, messages in messages_by_loc.items():
         m.current_location[1] for m in messages
     ])
 
+    roll = [m.current_location[3] for m in messages]
+    pitch = [m.current_location[4] for m in messages]
+    yaw = [m.current_location[5] for m in messages]
+    print("Location: ", key)
+    print("Roll max, min, diff", max(roll), min(roll), max(roll) - min(roll)) 
+    print("Pitch max, min, diff", max(pitch), min(pitch), max(pitch) - min(pitch)) 
+    print("Yaw max, min, diff", max(yaw), min(yaw), max(yaw) - min(yaw)) 
+    print("")
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    #xs = [m.current_location[0] for m in messages]
+    #ys = [m.current_location[1] for m in messages]
+    #zs = [m.current_location[2] for m in messages]
+    #ax.set_xlabel('X Label')
+    #ax.set_ylabel('Y Label')
+    #ax.set_zlabel('Z Label')
+    #ax.scatter(xs,ys,zs)
+    #ax.set_aspect('equal')
+    #plt.show()
+
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    #ax.set_xlabel('R Label')
+    #ax.set_ylabel('P Label')
+    #ax.set_zlabel('Y Label')
+    #ax.scatter(roll,pitch,yaw)
+    #ax.set_aspect('equal')
+    #plt.show()
 
     loc_center = [
         avg([msg.current_location[0] for msg in messages]),
@@ -173,21 +202,24 @@ plt.clf()
 
 fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
 
-center_locs = messages_by_loc[(3,3)]
+for key, center_locs in messages_by_loc.items():
+    center_locs = messages_by_loc[key]
+    print(key)
 
-std_x = np.std([m.current_location[0] for m in center_locs])
-std_y = np.std([m.current_location[1] for m in center_locs])
-cov_arg = []
+    std_x = np.std([m.current_location[0] for m in center_locs])
+    std_y = np.std([m.current_location[1] for m in center_locs])
+    cov_arg = []
 
-print("COV {}".format(np.cov(
-    [[m.current_location[0] for m in center_locs],
-    [m.current_location[1] for m in center_locs]],
-)))
-print("STD X {} STD Y {}".format(std_x, std_y))
-ax1.hist([m.current_location[0] for m in center_locs])
-ax2.hist([m.current_location[1] for m in center_locs])
-ax1.axvline(avg([m.current_location[0] for m in center_locs]), color='k', linestyle='dashed', linewidth=1)
-ax2.axvline(avg([m.current_location[1] for m in center_locs]), color='k', linestyle='dashed', linewidth=1)
+    print("COV {}".format(np.cov(
+        [[m.current_location[0] for m in center_locs],
+        [m.current_location[1] for m in center_locs]],
+    )))
+    print("STD X {} STD Y {}".format(std_x, std_y))
+    print("!!!!!!!!!!!!!!!!")
+    ax1.hist([m.current_location[0] for m in center_locs])
+    ax2.hist([m.current_location[1] for m in center_locs])
+    ax1.axvline(avg([m.current_location[0] for m in center_locs]), color='k', linestyle='dashed', linewidth=1)
+    ax2.axvline(avg([m.current_location[1] for m in center_locs]), color='k', linestyle='dashed', linewidth=1)
 
 #ax1.set_title("X readings")
 #ax2.set_title("Y readings")

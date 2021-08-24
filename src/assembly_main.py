@@ -36,7 +36,8 @@ RUNNING_EXPERIMENT = False
 VELOCITY_HISTORY = []
 DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
-GRIPPER_HANDLER = gripper_handler.GripperHandler()
+#GRIPPER_HANDLER = gripper_handler.GripperHandler()
+GRIPPER_HANDLER = None
 IS_USING_OPEN_LOOP_CONTROL = False
 
 BINARY_P_CONTROL_SELECTOR = 'BINARY_P'
@@ -402,7 +403,7 @@ def run_build_plan(rc_override_publisher):
     if not DRY_RUN:
         utils.set_motor_arming(True)
         rospy.loginfo("Motors armed.")
-        GRIPPER_HANDLER.start_opening_fingers()
+        #GRIPPER_HANDLER.start_opening_fingers()
 
     start_time = datetime.datetime.now()
     number_actions = len(ACTIONS)
@@ -461,7 +462,7 @@ def run_build_plan(rc_override_publisher):
         else:
             raise Exception("Unrecognized active control selector!")
 
-        GRIPPER_HANDLER.update()
+        #GRIPPER_HANDLER.update()
 
         utils.terminate_if_unsafe(go_message, 150, DRY_RUN)
         rc_override_publisher.publish(go_message)
