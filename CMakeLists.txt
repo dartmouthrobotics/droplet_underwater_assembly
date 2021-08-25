@@ -171,6 +171,7 @@ install(PROGRAMS
   scripts/open_arm.sh
   scripts/close_arm.sh
   src/display_controller.py
+  src/ballast_handler.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -55,39 +55,40 @@ class PIDTracker(object):
         self.pitch_i = pitch_i
         self.pitch_d = pitch_d
 
-        self.max_motor_speed = 100
+        self.max_motor_speed = 200
 
-        self.yaw_factor =   [0.0, -1.0, 1.0, -1.0, 0.0, 0.0, 0.0, -1.0]
-        self.x_factor =     [0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-        self.y_factor =     [0.0,  0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 0.0]
+        #self.yaw_factor =   [0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+        self.yaw_factor =   [0.0, 1.0, -1.0, -1.0, 0.0, -1.0, 0.0, 0.0]
+        self.x_factor =     [0.0, -1.0, -1.0,  -1.0, 0.0, 1.0, 0.0, 0.0]
+        self.y_factor =     [0.0,  -1.0, 1.0,  -1.0, 0.0, -1.0, 0.0, 0.0]
 
-        self.roll_factor =  [1.0, 0.0, -1.0, -1.0, 0.0, -1.0, 0.0, 0.0]
-        self.pitch_factor = [-1.0, 0.0, -1.0, 1.0, 0.0, -1.0, 0.0, 0.0]
-        self.z_factor =     [1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 0.0, 0.0]
+        self.roll_factor =  [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 1.0]
+        self.pitch_factor = [-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0]
+        self.z_factor =     [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, -1.0]
 
         self.error_history = []
         self.number_error_history_frames = 700
 
         self.forward_minimum_pwms = [
-            18,
-            25,
+            20,
             22,
+            16,
+            16,
             20,
-            25,
-            25,
-            20,
-            20,
+            18,
+            22,
+            18,
         ]
 
         self.backward_minimum_pwms = [
-            -30,
+            -28,
+            -26,
+            -32,
+            -32,
+            -28,
             -30,
             -28,
-            -35,
-            -25,
-            -25,
-            -30,
-            -30,
+            -32,
         ]
 
         self.current_position = None
@@ -217,7 +218,7 @@ class PIDTracker(object):
             self.latest_imu_reading.orientation.w
         ]
 
-        roll, pitch, _ = tf.transformations.euler_from_quaternion(imu_orientation)
+        _, roll, pitch = tf.transformations.euler_from_quaternion(imu_orientation, axes='szyx')
 
         return utils.angle_error_rads(roll, 0.0), utils.angle_error_rads(pitch, 0.0)
 
@@ -256,7 +257,7 @@ class PIDTracker(object):
         motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
 
         for speed in motor_speeds:
-            assert((abs(speed) - 1500) <= 150)
+            assert((abs(speed) - 1500) <= 400)
 
         return utils.construct_rc_message(motor_speeds)
 
@@ -306,7 +307,7 @@ class OpenLoopTracker(PIDTracker):
         motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
 
         for speed in motor_speeds:
-            assert((abs(speed) - 1500) <= 150)
+            assert((abs(speed) - 1500) <= 400)
 
         return utils.construct_rc_message(motor_speeds)
         # we want to maintain the roll, yaw correction since we get that every frame easily
@@ -357,6 +358,6 @@ class BinaryPController(PIDTracker):
         motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
 
         for speed in motor_speeds:
-            assert((abs(speed) - 1500) <= 150)
+            assert((abs(speed) - 1500) <= 400)
 
         return utils.construct_rc_message(motor_speeds)

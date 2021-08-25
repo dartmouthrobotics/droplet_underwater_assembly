@@ -1,4 +1,6 @@
 ; pickup platform (0) far right is 0,0,0. Far left is at index y=5
 ; wrist aligned is 1525
 ; wrist right angle is 2000
-PICKUP 4 0 5 1
+MOVE 0 -1.8 -0.13 -0.15 0.0 0.0 0.0
+MOVE 0 -1.8 -0.13 -0.15 0.0 0.0 0.0
+MOVE 0 -1.8 -0.13 -0.15 0.0 0.0 0.0

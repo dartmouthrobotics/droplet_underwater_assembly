@@ -21,6 +21,7 @@ import trajectory_tracker
 import assembly_action
 import config
 import display_controller
+import ballast_handler
 
 import build_platform
 import build_plan_parser
@@ -36,8 +37,9 @@ RUNNING_EXPERIMENT = False
 VELOCITY_HISTORY = []
 DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
-#GRIPPER_HANDLER = gripper_handler.GripperHandler()
-GRIPPER_HANDLER = None
+GRIPPER_HANDLER = gripper_handler.GripperHandler()
+BALLAST_HANDLER = ballast_handler.BallastHandler()
+#GRIPPER_HANDLER = None
 IS_USING_OPEN_LOOP_CONTROL = False
 
 BINARY_P_CONTROL_SELECTOR = 'BINARY_P'
@@ -81,25 +83,45 @@ latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
 
+#pid_gains_dict = dict(
+#    x_p=4.00,
+#    y_p=4.00,
+#    yaw_p=2.35, 
+#    x_d=-1.0, 
+#    y_d=-0.25,
+#    yaw_d=1.0,
+#    x_i=config.DEFAULT_X_I_GAIN,
+#    y_i=config.DEFAULT_Y_I_GAIN,
+#    yaw_i=0.15,
+#    roll_p=-0.3,
+#    roll_i=0.0,
+#    roll_d=1.0,
+#    z_p=3.5,
+#    z_i=config.DEFAULT_Z_I_GAIN,
+#    z_d=-0.50,
+#    pitch_p=-1.0,
+#    pitch_i=0.0,
+#    pitch_d=0.75,
+#) 
 pid_gains_dict = dict(
-    x_p=4.00,
-    y_p=4.00,
-    yaw_p=2.35, 
-    x_d=-1.0, 
-    y_d=-0.25,
-    yaw_d=1.0,
-    x_i=config.DEFAULT_X_I_GAIN,
-    y_i=config.DEFAULT_Y_I_GAIN,
-    yaw_i=0.15,
-    roll_p=-0.3,
+    x_p=3.00,
+    y_p=3.00,
+    yaw_p=2.75, 
+    x_d=0.0, 
+    y_d=0.0,
+    yaw_d=0.0,
+    x_i=0.0,
+    y_i=0.0,
+    yaw_i=0.0,
+    roll_p=2.0,
     roll_i=0.0,
-    roll_d=1.0,
+    roll_d=0.0,
     z_p=3.5,
-    z_i=config.DEFAULT_Z_I_GAIN,
-    z_d=-0.50,
-    pitch_p=-1.0,
+    z_i=0.0,
+    z_d=-0.00,
+    pitch_p=2.0,
     pitch_i=0.0,
-    pitch_d=0.75,
+    pitch_d=0.00,
 ) 
 
 CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
@@ -403,7 +425,7 @@ def run_build_plan(rc_override_publisher):
     if not DRY_RUN:
         utils.set_motor_arming(True)
         rospy.loginfo("Motors armed.")
-        #GRIPPER_HANDLER.start_opening_fingers()
+        GRIPPER_HANDLER.start_opening_fingers()
 
     start_time = datetime.datetime.now()
     number_actions = len(ACTIONS)
@@ -462,9 +484,10 @@ def run_build_plan(rc_override_publisher):
         else:
             raise Exception("Unrecognized active control selector!")
 
-        #GRIPPER_HANDLER.update()
+        GRIPPER_HANDLER.update()
+        BALLAST_HANDLER.update()
 
-        utils.terminate_if_unsafe(go_message, 150, DRY_RUN)
+        utils.terminate_if_unsafe(go_message, 400, DRY_RUN)
         rc_override_publisher.publish(go_message)
 
         loop_end = rospy.Time.now()
@@ -488,7 +511,7 @@ def run_build_plan(rc_override_publisher):
 
 
 def wait_for_marker_data():
-    poll_rate = rospy.Rate(2)
+    poll_rate = rospy.Rate(10)
     while TIMES_TRACKED_MARKER_SEEN < 100 and not rospy.is_shutdown():
         if DISPLAY is not None:
             if HAVE_ANY_MARKER_READING:
@@ -496,6 +519,7 @@ def wait_for_marker_data():
             else:
                 DISPLAY.update_lcd_display("No STag!", "No STag!")
 
+        BALLAST_HANDLER.update()
         poll_rate.sleep()
 
 
@@ -680,7 +704,9 @@ def main():
     if DISPLAY is not None:
         DISPLAY.update_led_state([0, 255, 0], 1)       
 
-    rospy.loginfo("Waiting for enough marker data....")
+    rospy.loginfo("Waiting for enough marker data from marker {}....".format(config.TRACKED_MARKER_ID))
+    BALLAST_HANDLER.start_emptying_ballast_air()
+
     wait_for_marker_data()
     rospy.loginfo("Got marker data, going!!")
 
@@ -694,11 +720,13 @@ def main():
         tracked_bundle_ids=[config.TRACKED_MARKER_ID]
     )
 
+    BALLAST_HANDLER.start_emptying_ballast_air()
     run_build_plan(
         rc_override_publisher
     )
 
     rospy.loginfo("Finished experiment!")
+    BALLAST_HANDLER.start_emptying_ballast_air()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import collections
 
 #IMU_TOPIC = "/imu/data"
-IMU_TOPIC = "/imu/data"
+IMU_TOPIC = "/mini_ahrs_ros/imu"
 RC_OVERRIDE_TOPIC = "/mavros/rc/override"
 GOAL_POSE_TOPIC = "/goal_pose"
 AR_MARKER_TOPIC = "/bluerov_controller/ar_tag_detector"
@@ -19,7 +19,7 @@ FINGER_CLOSED_POSITION = 1500
 DEFAULT_POSITION_HOLD_TIME = 6.0
 
 WRIST_SERVO_INDEX = 1
-FINGER_SERVO_INDEX = 0
+FINGER_SERVO_INDEX = 2
 
 MAV_CMD_DO_SET_SERVO = 183
 
@@ -80,7 +80,7 @@ DROP_PLATFORM_DIMENSIONS = [4, 15]
 MIN_PICKUP_SLOT = [-1.94, 0.12, -0.32, 0, 0, 0]
 MIN_DROP_SLOT = [-1.94, -0.115, -0.35, 0, 0, 0]
 
-TRACKED_MARKER_ID = 4
+TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.012, 0.012, 0.025, float("inf"), float("inf"), 0.018]
 COARSE_POSE_TOLERANCE = [0.04, 0.04, 0.04, float("inf"), float("inf"), 0.05]
 ULTRA_COARSE_POSE_TOLERANCE = [0.10, 0.10, 0.10, float("inf"), float("inf"), 0.18]
@@ -118,43 +118,11 @@ GRIPPER_HOLD_TIME = 2.5
 
 INTERMEDIATE_WAYPOINT_DISTANCE = 0.10
 
-#ACTIONS = [
-#    # 5 to 1
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_5_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_5_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_1_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_1_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#
-#    # 4 to 6
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_4_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_4_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_6_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_6_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#
-#    # 2 to 3
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('close_gripper', config.OVER_BLOCK_2_POSE_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_2_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('open_gripper', config.OVER_BLOCK_3_POSE_MID_LOW, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.OVER_BLOCK_3_POSE_HIGH, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#]
+# BALLAST PARAMS
+BALLAST_SERVO_INDEX = 0
+BALLAST_AIR_IN_PWM = 1700
+BALLAST_AIR_OUT_PWM = 1300
+BALLAST_AIR_NEUTRAL_PWM = 1500
+
+BALLAST_AIR_FILL_TIME_SECONDS = 2.0
+BALLAST_AIR_EMPTY_TIME_SECONDS = 15.0
