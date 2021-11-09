@@ -16,35 +16,54 @@ class BallastHandler(object):
     def start_filling_ballast_with_air(self):
         self.current_state = self.state_fill_with_air
         self.entered_state_time = rospy.Time.now()
-        self.publish_servo_position(config.BALLAST_AIR_IN_PWM, config.BALLAST_SERVO_INDEX)
+        self.publish_servo_position(
+            config.BALLAST_SCUBA_VALVE_FULL_OPEN_PWM,
+            config.BALLAST_SCUBA_SERVO_INDEX
+        )
+        self.publish_servo_position(
+            config.BALLAST_TANK_OUTLET_CLOSED_PWM,
+            config.BALLAST_TANK_OUTLET_SERVO_INDEX
+        )
 
     def start_emptying_ballast_air(self):
         self.current_state = self.state_empty_ballast_air
         self.entered_state_time = rospy.Time.now()
-        self.publish_servo_position(config.BALLAST_AIR_OUT_PWM, config.BALLAST_SERVO_INDEX)
+        self.publish_servo_position(
+            config.BALLAST_SCUBA_VALVE_CLOSED_PWM,
+            config.BALLAST_SCUBA_SERVO_INDEX
+        )
+        self.publish_servo_position(
+            config.BALLAST_TANK_OUTLET_FULL_OPEN_PWM,
+            config.BALLAST_TANK_OUTLET_SERVO_INDEX
+        )
 
     def go_to_neutral(self):
         self.current_state = self.state_neutral
         self.entered_state_time = rospy.Time.now()
-        self.publish_servo_position(config.BALLAST_AIR_NEUTRAL_PWM, config.BALLAST_SERVO_INDEX)
+        self.publish_servo_position(
+            config.BALLAST_SCUBA_VALVE_CLOSED_PWM,
+            config.BALLAST_SCUBA_SERVO_INDEX
+        )
+        self.publish_servo_position(
+            config.BALLAST_TANK_OUTLET_CLOSED_PWM,
+            config.BALLAST_TANK_OUTLET_SERVO_INDEX
+        )
 
     def update(self):
-        seconds_in_state = (rospy.Time.now() - self.entered_state_time).to_sec()
+        if self.entered_state_time is not None:
+            seconds_in_state = (rospy.Time.now() - self.entered_state_time).to_sec()
 
-        if self.current_state == self.state_fill_with_air:
-            if seconds_in_state > config.BALLAST_AIR_FILL_TIME_SECONDS:
+            if self.current_state == self.state_fill_with_air:
+                if seconds_in_state > config.BALLAST_AIR_FILL_TIME_SECONDS:
+                    self.go_to_neutral()
+
+            elif self.current_state == self.state_empty_ballast_air:
+                if seconds_in_state > config.BALLAST_AIR_EMPTY_TIME_SECONDS:
+                    self.go_to_neutral()
+
+            elif self.current_state == self.state_neutral:
                 self.go_to_neutral()
 
-        elif self.current_state == self.state_empty_ballast_air:
-            if seconds_in_state > config.BALLAST_AIR_EMPTY_TIME_SECONDS:
-                self.go_to_neutral()
-
-        elif self.current_state == self.state_neutral:
-            self.go_to_neutral()
-
-
-    def fill_ballast_with_air(self):
-        self.publish_servo_position(config.FILL_BALLAST_PWM, )
 
     def publish_servo_position(self, position, servo_index):
         if position < config.MIN_SERVO_PWM or position > config.MAX_SERVO_PWM:

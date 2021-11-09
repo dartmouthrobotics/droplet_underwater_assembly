@@ -1,0 +1,26 @@
+; pickup platform (0) far right is 0,0,0. Far left is at index y=5
+; wrist aligned is 1525
+; wrist right angle is 2000
+
+; what if we broke out move and hold commands?
+
+MOVE 0 -2.2 -0.13 -0.32 0.0 0.0 0.0 ; centered position
+HOLD 10.0
+MOVE 0 -2.2 0.50 -0.32 0.0 0.0 0.0 ; 0.75 meters right
+HOLD 10.0
+MOVE 0 -2.2 -0.13 -0.32 0.0 0.0 0.0  ; 0.75 meters left
+HOLD 10.0
+MOVE 0 -2.2 -0.50 -0.32 0.0 0.0 0.0  ; 0.5 meters left
+HOLD 10.0
+MOVE 0 -2.2 0.55 -0.32 0.0 0.0 0.0 ; 1.0 meters right
+HOLD 10.0
+MOVE 0 -2.2 -0.13 -0.32 0.0 0.0 0.0 ; recenter
+HOLD 10.0
+MOVE 0 -2.2 -0.13 -0.60 0.0 0.0 0.0 ; descend 0.3 meters
+HOLD 10.0
+MOVE 0 -2.2 -0.13 -0.32 0.0 0.0 0.0 ; ascend 0.3 meters
+HOLD 10.0
+MOVE 0 -2.2 -0.13 -0.60 0.0 0.0 0.0 ; descend 0.3 meters
+HOLD 10.0
+MOVE 0 -2.2 -0.13 -0.32 0.0 0.0 0.0 ; ascend 0.3 meters
+HOLD 10.0

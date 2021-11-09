@@ -54,7 +54,7 @@ BUILD_PHASE_PUBLISHER = None
 
 DISPLAY = None
 try:
-    DISPLAY = display_controller.DisplayController("/dev/ttyUSB0", 9600)
+    DISPLAY = display_controller.DisplayController("/dev/ttyUSB1", 9600)
 except:
     rospy.logerr("Unable to connect to display controller!")
 
@@ -103,25 +103,45 @@ transform_broadcaster = None
 #    pitch_i=0.0,
 #    pitch_d=0.75,
 #) 
+#pid_gains_dict = dict( # single gain for debugging
+#    x_p=0.00,
+#    y_p=0.00,
+#    yaw_p=0.00, 
+#    x_d=0.0, 
+#    y_d=0.0,
+#    yaw_d=1.0,
+#    x_i=0.0,
+#    y_i=0.0,
+#    yaw_i=0.0,
+#    roll_p=0.0,
+#    roll_i=0.0,
+#    roll_d=0.0,
+#    z_p=0.0,
+#    z_i=0.0,
+#    z_d=0.00,
+#    pitch_p=0.0,
+#    pitch_i=0.0,
+#    pitch_d=0.00,
+#) 
 pid_gains_dict = dict(
-    x_p=3.00,
-    y_p=3.00,
-    yaw_p=2.75, 
-    x_d=0.0, 
-    y_d=0.0,
-    yaw_d=0.0,
-    x_i=0.0,
-    y_i=0.0,
-    yaw_i=0.0,
+    x_p=1.25,
+    y_p=1.25,
+    yaw_p=1.95, 
+    x_d=-0.50, 
+    y_d=0.00,
+    yaw_d=0.2,
+    x_i=0.1,
+    y_i=0.1,
+    yaw_i=0.15,
     roll_p=2.0,
     roll_i=0.0,
-    roll_d=0.0,
-    z_p=3.5,
-    z_i=0.0,
-    z_d=-0.00,
+    roll_d=-1.0,
+    z_p=2.00,
+    z_i=config.DEFAULT_Z_I_GAIN,
+    z_d=-1.50,
     pitch_p=2.0,
     pitch_i=0.0,
-    pitch_d=0.00,
+    pitch_d=-1.00,
 ) 
 
 CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
@@ -343,6 +363,13 @@ def act_on_current_action(current_action, pose_error):
             started = True
 
         elif current_action.action_type == 'move':
+            ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
+            if DISPLAY is not None:
+                DISPLAY.update_led_state([255,0,255],1)
+            current_action.start()
+            started = True
+
+        elif current_action.action_type == 'hold':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if DISPLAY is not None:
                 DISPLAY.update_led_state([255,0,255],1)
@@ -705,9 +732,11 @@ def main():
         DISPLAY.update_led_state([0, 255, 0], 1)       
 
     rospy.loginfo("Waiting for enough marker data from marker {}....".format(config.TRACKED_MARKER_ID))
-    BALLAST_HANDLER.start_emptying_ballast_air()
 
-    wait_for_marker_data()
+    if not DRY_RUN:
+        BALLAST_HANDLER.start_emptying_ballast_air()
+        wait_for_marker_data()
+
     rospy.loginfo("Got marker data, going!!")
 
     for action in ACTIONS:
@@ -720,13 +749,19 @@ def main():
         tracked_bundle_ids=[config.TRACKED_MARKER_ID]
     )
 
-    BALLAST_HANDLER.start_emptying_ballast_air()
+    if not DRY_RUN:
+        BALLAST_HANDLER.start_filling_ballast_with_air()
+        #BALLAST_HANDLER.start_emptying_ballast_air()
+
+
     run_build_plan(
         rc_override_publisher
     )
 
     rospy.loginfo("Finished experiment!")
-    BALLAST_HANDLER.start_emptying_ballast_air()
+
+    if not DRY_RUN:
+        BALLAST_HANDLER.start_emptying_ballast_air()
 
 
 if __name__ == "__main__":

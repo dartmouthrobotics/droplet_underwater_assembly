@@ -23,10 +23,6 @@ Left is to the left if you are looking at the back of the bluerov towards the ca
 8: bottom back right
 """
 
-# yeah so we can engage the rp stabilization and then run a control loop that tries to center the tag and finds a certain distance
-# I LOVE IT I THINK I GOT IT!!!!
-
-
 class PIDTracker(object):
     # how should we handle the I-gains?
     # do a reset at zero crossing? No I think not -- maybe a fixed time window?
@@ -55,16 +51,19 @@ class PIDTracker(object):
         self.pitch_i = pitch_i
         self.pitch_d = pitch_d
 
-        self.max_motor_speed = 200
-
         #self.yaw_factor =   [0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
         self.yaw_factor =   [0.0, 1.0, -1.0, -1.0, 0.0, -1.0, 0.0, 0.0]
         self.x_factor =     [0.0, -1.0, -1.0,  -1.0, 0.0, 1.0, 0.0, 0.0]
-        self.y_factor =     [0.0,  -1.0, 1.0,  -1.0, 0.0, -1.0, 0.0, 0.0]
+        self.y_factor =     [0.0,  1.0, -1.0,  1.0, 0.0, 1.0, 0.0, 0.0]
 
         self.roll_factor =  [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 1.0]
         self.pitch_factor = [-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0]
         self.z_factor =     [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, -1.0]
+
+        self.lateral_motors = [1, 2, 3, 5]
+        self.updown_motors =  [0, 4, 6, 7]
+        self.max_motor_speed_lateral = 150
+        self.max_motor_speed_updown = 350
 
         self.error_history = []
         self.number_error_history_frames = 700
@@ -107,12 +106,41 @@ class PIDTracker(object):
 
         self.goal_position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
+        for lateral_motor in self.lateral_motors:
+            if lateral_motor in self.updown_motors:
+                raise Exception("A motor cannot be assigned to both the lateral and up/down set!")
+
+        for i in range(8):
+            if i not in self.lateral_motors and i not in self.updown_motors:
+                raise Exception("Motor {} is not assigned as either lateral or up/down!".format(i))
+
+        if len(self.lateral_motors) + len(self.updown_motors) != 8:
+            raise Exception("The total number of motors assigned to either lateral or up/down must be 8!")
+
+
+    def normalize_intensities(self, intensities):
+        lateral_intensities = [intensities[i] for i in self.lateral_motors]
+        updown_intensities = [intensities[i] for i in self.updown_motors]
+
+        max_lateral_intensity = max(1.0, max(map(abs, lateral_intensities)))
+        max_updown_intensity = max(1.0, max(map(abs, updown_intensities)))
+
+        normalized_lateral = [val / max_lateral_intensity for val in lateral_intensities]
+        normalized_updown = [val / max_updown_intensity for val in updown_intensities]
+
+        combined = [0.0] * 8
+
+        for i, lateral_motor in enumerate(self.lateral_motors):
+            combined[lateral_motor] = normalized_lateral[i] 
+
+        for i, updown_motor in enumerate(self.updown_motors):
+            combined[updown_motor] = normalized_updown[i] 
+        return combined
+
 
     def convert_thrust_vector_to_motor_intensities(self, thrust_vector):
         # thrust vector is: x,y,yaw,z,roll,pitch
         motor_intensities = [0.0] * 8
-
-        max_intensity = 1.0
 
         # x,y,yaw intensities
         for i in range(len(motor_intensities)):
@@ -124,10 +152,7 @@ class PIDTracker(object):
                 thrust_vector[5] * self.pitch_factor[i]
             )
 
-            if abs(motor_intensities[i]) > max_intensity:
-                max_intensity = abs(motor_intensities[i])
-
-        normalized_intensities = [val / max_intensity for val in motor_intensities]
+        normalized_intensities = self.normalize_intensities(motor_intensities)
 
         for intensity in normalized_intensities:
             assert(abs(intensity) <= 1.0)
@@ -155,7 +180,12 @@ class PIDTracker(object):
             elif intensities[i] > 0:
                 offset = self.forward_minimum_pwms[i]
 
-            offset_motor_speeds[i] = offset_motor_speeds[i] + (intensities[i] * self.max_motor_speed) + offset
+            max_motor_speed = self.max_motor_speed_lateral
+
+            if i in self.updown_motors:
+                max_motor_speed = self.max_motor_speed_updown
+
+            offset_motor_speeds[i] = offset_motor_speeds[i] + (intensities[i] * max_motor_speed) + offset
 
         return offset_motor_speeds
 
@@ -231,8 +261,8 @@ class PIDTracker(object):
         if self.latest_imu_reading is not None:
             roll_error, pitch_error = self.get_angle_error_from_imu_reading()
 
-            roll_velocity = self.latest_imu_reading.angular_velocity.x
-            pitch_velocity = self.latest_imu_reading.angular_velocity.y
+            roll_velocity = self.latest_imu_reading.angular_velocity.y # weird correspondance
+            pitch_velocity = self.latest_imu_reading.angular_velocity.x
 
             return [
                 z_thrust,

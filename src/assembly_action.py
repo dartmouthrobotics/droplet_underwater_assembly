@@ -21,7 +21,7 @@ class AssemblyAction(object):
         return cls('move_wrist', pose, [1.0] * 6, wrist_rotation_pwm=pwm)
 
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=config.DEFAULT_POSITION_HOLD_TIME, **kwargs):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move']
+        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move', 'hold']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
@@ -73,6 +73,9 @@ class AssemblyAction(object):
         if self.action_type == "binary_P_move":
             return "Coarse grained recenter to {}".format(self.goal_pose)
 
+        if self.action_type == "hold":
+            return "Hold for {} seconds".format(self.position_hold_time)
+
         else:
             raise Exception("__str__ not implemented for assembly actions of type {}".format(self.action_type))
 
@@ -116,6 +119,9 @@ class AssemblyAction(object):
         if self.action_type == 'binary_P_move':
             reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
             return reached_goal
+
+        if self.action_type == 'hold':
+            return (rospy.Time.now() - self.start_time).to_sec() > self.position_hold_time
 
         if self.action_type == 'move_wrist':
             if self.gripper_handler.desired_rotation_position is None:

@@ -272,10 +272,22 @@ class BuildPlanParser(object):
                         ]
 
                         parsed_actions.append(
-                            assembly_action.AssemblyAction('move', target_location, config.COARSE_POSE_TOLERANCE)
+                            assembly_action.AssemblyAction('move', target_location, config.COARSE_POSE_TOLERANCE, position_hold_time=0.0)
                         )
-                        parsed_actions[-1].high_level_build_step = line
+
                         last_pose = parsed_actions[-1].goal_pose 
+                        parsed_actions[-1].high_level_build_step = line
+                    elif command.startswith("HOLD"):
+                        hold_time = float(command.split(" ")[1].strip())
+
+                        parsed_actions.append(
+                            assembly_action.AssemblyAction(
+                                'hold',
+                                last_pose,
+                                config.COARSE_POSE_TOLERANCE,
+                                position_hold_time=hold_time
+                            )
+                        )
                         parsed_actions[-1].high_level_build_step = line
 
                     elif command.startswith("ROTATE_WRIST"):

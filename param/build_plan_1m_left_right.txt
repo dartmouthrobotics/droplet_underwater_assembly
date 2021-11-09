@@ -1,0 +1,20 @@
+MOVE 0 -2.0 -0.13 -0.35 0.0 0.0 0.0 ; centered position
+HOLD 10.0
+MOVE 0 -2.0 -0.3750 -0.35 0.0 0.0 0.0  ; 0.5 meters left
+HOLD 10.0
+MOVE 0 -2.0 0.3750 -0.35 0.0 0.0 0.0 ; 1.0 meters right
+
+HOLD 10.0
+MOVE 0 -2.0 -0.3750 -0.35 0.0 0.0 0.0  ; 1.0 meters left
+HOLD 10.0
+MOVE 0 -2.0 0.3750 -0.35 0.0 0.0 0.0 ; 1.0 meters right
+
+HOLD 10.0
+MOVE 0 -2.0 -0.3750 -0.35 0.0 0.0 0.0  ; 1.0 meters left
+HOLD 10.0
+MOVE 0 -2.0 0.3750 -0.35 0.0 0.0 0.0 ; 1.0 meters right
+
+HOLD 10.0
+MOVE 0 -2.0 -0.3750 -0.35 0.0 0.0 0.0  ; 1.0 meters left
+HOLD 10.0
+MOVE 0 -2.0 0.3750 -0.35 0.0 0.0 0.0 ; 1.0 meters right
