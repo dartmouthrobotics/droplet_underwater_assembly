@@ -1,3 +1,5 @@
 SUBSYSTEM=="tty" ATTRS{idProduct}=="6001" ATTRS{manufacturer}=="FTDI" ATTRS{product}=="USB-RS422 Cable" SYMLINK+="miniahrs-serial"
 
 SUBSYSTEM=="tty" ATTRS{idProduct}=="7523" ATTRS{idVendor}=="1a86" SYMLINK+="arduino-serial-ui"
+
+SUBSYSTEM=="tty" ATTRS{manufacturer}=="ArduPilot" SYMLINK+="mRoX21-FCU"

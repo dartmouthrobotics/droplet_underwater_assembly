@@ -3,7 +3,7 @@
 <launch>
   <!--arg name="fcu_url" default="/dev/pixhawk:115200"/-->
   <!--<arg name="fcu_url" default="udp://:14551@192.168.2.2:49322"/>-->
-  <arg name="fcu_url" default="/dev/ttyACM0:115200"/>
+  <arg name="fcu_url" default="/dev/mRoX21-FCU:115200"/>
   <arg name="gcs_url" default=""/>
   <arg name="system_id" default="255"/>
   <arg name="component_id" default="240"/>
@@ -13,7 +13,7 @@
   <arg name="config_yaml" value="$(find mavros)/launch/apm_config.yaml"/>
   <arg name="log_output" default="screen"/>
 
-  <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="$(arg log_output)">
+  <node pkg="mavros" type="mavros_node" name="mavros" respawn="true" clear_params="true" output="$(arg log_output)">
     <param name="fcu_url" value="$(arg fcu_url)"/>
     <param name="gcs_url" value="$(arg gcs_url)"/>
     <param name="system_id" value="$(arg system_id)"/>

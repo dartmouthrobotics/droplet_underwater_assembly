@@ -15,16 +15,15 @@ import mavros_msgs.msg
 import stag_ros.msg
 import sensor_msgs.msg
 
-import utils
-import gripper_handler
-import trajectory_tracker
-import assembly_action
-import config
-import display_controller
-import ballast_handler
-
-import build_platform
-import build_plan_parser
+from droplet_underwater_assembly_libs import utils
+from droplet_underwater_assembly_libs import gripper_handler
+from droplet_underwater_assembly_libs import trajectory_tracker
+from droplet_underwater_assembly_libs import assembly_action
+from droplet_underwater_assembly_libs import config
+from droplet_underwater_assembly_libs import display_controller
+from droplet_underwater_assembly_libs import ballast_handler
+from droplet_underwater_assembly_libs import build_platform
+from droplet_underwater_assembly_libs import build_plan_parser
 
 import stag_ros.srv
 
@@ -54,7 +53,7 @@ BUILD_PHASE_PUBLISHER = None
 
 DISPLAY = None
 try:
-    DISPLAY = display_controller.DisplayController("/dev/ttyUSB1", 9600)
+    DISPLAY = display_controller.DisplayController("/dev/arduino-serial-ui", 9600)
 except:
     rospy.logerr("Unable to connect to display controller!")
 
