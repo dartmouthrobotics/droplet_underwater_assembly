@@ -8,6 +8,22 @@ class AssemblyAction(object):
         return cls('change_platforms', [0.0] * 6, [1.0] * 6, to_platform_id=platform_id)
 
     @classmethod
+    def construct_inflate_ballast(cls):
+        return cls(
+            'inflate_ballast',
+            None,
+            None
+        )
+
+    @classmethod
+    def construct_deflate_ballast(cls):
+        return cls(
+            'deflate_ballast',
+            None,
+            None
+        )
+
+    @classmethod
     def construct_rotate_wrist(cls, pwm, pose):
         if pwm > config.MAX_SERVO_PWM or pwm < config.MIN_SERVO_PWM:
             raise Exception(
@@ -21,7 +37,7 @@ class AssemblyAction(object):
         return cls('move_wrist', pose, [1.0] * 6, wrist_rotation_pwm=pwm)
 
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=config.DEFAULT_POSITION_HOLD_TIME, **kwargs):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move', 'hold']
+        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move', 'hold', 'inflate_ballast', 'deflate_ballast', 'change_buoyancy']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
@@ -33,10 +49,25 @@ class AssemblyAction(object):
         self.gripper_hold_time = config.GRIPPER_HOLD_TIME
         self.pose_tolerance = pose_tolerance
         self.gripper_handler = None
+        self.ballast_handler = None
 
         self.sequence_id = 0
 
         self.timeout = None
+        self.ballast_change_t_level_from_planner = None
+        self.ballast_change_direction = None
+
+        if 't_level_from_planner' in kwargs:
+            self.ballast_change_t_level_from_planner = kwargs['t_level_from_planner']
+
+        if 'change_direction' in kwargs:
+            self.ballast_change_direction = kwargs['ballast_change_direction']
+
+        if self.action_type == 'change_buoyancy':
+            assert(self.ballast_change_t_level is not None)
+            assert(self.ballast_change_direction is not None)
+            assert(self.ballast_change_direction in [-1, 1])
+            assert(0.0 <= self.ballast_change_t_level_from_planner <= 1.0)
 
         if self.action_type == 'move_wrist':
             if 'wrist_rotation_pwm' not in kwargs:
@@ -76,6 +107,20 @@ class AssemblyAction(object):
         if self.action_type == "hold":
             return "Hold for {} seconds".format(self.position_hold_time)
 
+        if self.action_type == 'inflate_ballast':
+            return "Inflate ballast tanks"
+
+        if self.action_type == 'deflate_ballast':
+            return "Deflate ballast tanks"
+
+        if self.action_type == 'change_buoyancy':
+            # can we do fully deflating or inflating
+            # what about 
+            return "Change buoyancy direction: {}. tlevel {}".format(
+                self.buoyancy_change_direction,
+                self.ballast_change_t_level_from_planner
+            )
+
         else:
             raise Exception("__str__ not implemented for assembly actions of type {}".format(self.action_type))
 
@@ -106,10 +151,18 @@ class AssemblyAction(object):
             else:
                 return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
 
+        if self.action_type == 'change_buoyancy':
+            if self.buoyancy_change_direction > 0:
+                # going up
+                return pose_error[2] < 0
+            if self.buoyancy_change_direction < 0:
+                # going down
+                return pose_error[2] > 0
+
         if self.action_type == 'open_gripper' or self.action_type == 'close_gripper':
             #elapsed_seconds = (rospy.Time.now() - self.start_time).to_sec()
             #complete = elapsed_seconds > self.gripper_handler.toggle_time_seconds + self.gripper_hold_time
-            complete = self.gripper_handler.current_finger_position == self.gripper_handler.desired_finger_position
+            complete = not self.gripper_handler.is_opening and not self.gripper_handler.is_closing
 
             return complete
 
@@ -128,5 +181,11 @@ class AssemblyAction(object):
                 return False
 
             return self.gripper_handler.desired_rotation_position == self.gripper_handler.current_rotation_position
+
+        if self.action_type == 'inflate_ballast':
+            return self.is_started and self.ballast_handler.current_state == self.ballast_handler.state_neutral
+
+        if self.action_type == 'deflate_ballast':
+            return self.is_started and self.ballast_handler.current_state == self.ballast_handler.state_neutral
 
         raise Exception("Unrecognized action type!")

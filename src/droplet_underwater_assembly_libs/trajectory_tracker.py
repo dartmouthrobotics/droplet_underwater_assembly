@@ -5,23 +5,9 @@ import tf
 
 NUMBER_MOTORS = 8
 
-"""
-Motor locations:
-
-Top refers to motors facing up on top of bluerov
-Bottom (the ones facing inward on bottom)
-Front means towards the camera
-Left is to the left if you are looking at the back of the bluerov towards the camera (ie you are behind it)
-
-1: top back right
-2: bottom front right
-3: top front right
-4: top front left
-5: bottom front left
-6: top back left
-7: bottom back left
-8: bottom back right
-"""
+# feeding z_d into this stuff?
+# would that really help?
+# why was it so unstable previously?
 
 class PIDTracker(object):
     # how should we handle the I-gains?
@@ -50,44 +36,45 @@ class PIDTracker(object):
         self.pitch_p = pitch_p
         self.pitch_i = pitch_i
         self.pitch_d = pitch_d
+        self.z_override = 0.0
 
         #self.yaw_factor =   [0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
-        self.yaw_factor =   [0.0, 1.0, -1.0, -1.0, 0.0, -1.0, 0.0, 0.0]
-        self.x_factor =     [0.0, -1.0, -1.0,  -1.0, 0.0, 1.0, 0.0, 0.0]
-        self.y_factor =     [0.0,  1.0, -1.0,  1.0, 0.0, 1.0, 0.0, 0.0]
+        self.yaw_factor =   [-1.0, 1.0, 0.0, 0.0, 0.0, -1.0, -1.0, 0.0]
+        self.x_factor =     [-1.0, -1.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0]
+        self.y_factor =     [-1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
 
-        self.roll_factor =  [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, 1.0]
-        self.pitch_factor = [-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0]
-        self.z_factor =     [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, -1.0]
+        self.roll_factor =  [0.0, 0.0, 1.0, 1.0, -1.0, 0.0, 0.0, -1.0]
+        self.pitch_factor = [0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0]
+        self.z_factor =     [0.0, 0.0, -1.0, 1.0, 1.0, 0.0, 0.0, -1.0]
 
-        self.lateral_motors = [1, 2, 3, 5]
-        self.updown_motors =  [0, 4, 6, 7]
+        self.lateral_motors = [0, 1, 5, 6]
+        self.updown_motors =  [2, 3, 4, 7]
         self.max_motor_speed_lateral = 150
-        self.max_motor_speed_updown = 250
+        self.max_motor_speed_updown = 300
 
         self.error_history = []
         self.number_error_history_frames = 700
 
         self.forward_minimum_pwms = [
             20,
-            22,
-            16,
-            16,
             20,
-            18,
-            22,
-            18,
+            20,
+            20,
+            20,
+            25,
+            20,
+            20,
         ]
 
         self.backward_minimum_pwms = [
-            -28,
-            -26,
-            -32,
-            -32,
-            -28,
             -30,
-            -28,
-            -32,
+            -35,
+            -30,
+            -35,
+            -30,
+            -30,
+            -35,
+            -35,
         ]
 
         self.current_position = None
@@ -116,6 +103,10 @@ class PIDTracker(object):
 
         if len(self.lateral_motors) + len(self.updown_motors) != 8:
             raise Exception("The total number of motors assigned to either lateral or up/down must be 8!")
+
+
+    def set_z_override(self, override):
+        self.z_override = override
 
 
     def normalize_intensities(self, intensities):
@@ -256,6 +247,9 @@ class PIDTracker(object):
     def get_zrp_thrust_vector(self):
         error = self.get_error()
 
+        if self.z_override != 0.0:
+            error[2] = self.z_override
+
         z_thrust = (error[2] * self.z_p) + (self.current_velocity[2] * self.z_d) + (self.error_integral[2] * self.z_i)
 
         if self.latest_imu_reading is not None:
@@ -365,7 +359,7 @@ class BinaryPController(PIDTracker):
         zrp_thrusts[2] = 0.0
         zrp_thrusts[1] = 0.0
 
-        xyyaw_thrusts = self.get_xyyaw_thrust_vector()
+        xyyaw_thrusts = self.aw_thrust_vector()
 
         thrust_vector = xyyaw_thrusts + zrp_thrusts
 

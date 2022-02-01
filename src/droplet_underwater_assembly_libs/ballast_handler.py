@@ -13,6 +13,11 @@ class BallastHandler(object):
         self.current_state = self.state_neutral
         self.entered_state_time = None
 
+        self.pulse_interval = None
+        self.pulsing_state = None
+        self.current_pulse_start = None
+
+
     def start_filling_ballast_with_air(self):
         self.current_state = self.state_fill_with_air
         self.entered_state_time = rospy.Time.now()
@@ -24,6 +29,7 @@ class BallastHandler(object):
             config.BALLAST_TANK_OUTLET_CLOSED_PWM,
             config.BALLAST_TANK_OUTLET_SERVO_INDEX
         )
+
 
     def start_emptying_ballast_air(self):
         self.current_state = self.state_empty_ballast_air
@@ -37,6 +43,7 @@ class BallastHandler(object):
             config.BALLAST_TANK_OUTLET_SERVO_INDEX
         )
 
+
     def go_to_neutral(self):
         self.current_state = self.state_neutral
         self.entered_state_time = rospy.Time.now()
@@ -49,20 +56,51 @@ class BallastHandler(object):
             config.BALLAST_TANK_OUTLET_SERVO_INDEX
         )
 
+
+    def start_pulsing(self, state, interval):
+        # go between the given state and neutral repeatedly
+        assert(
+            state in [self.state_fill_with_air, self.state_empty_ballast_air, self.state_neutral]
+        )
+
+        self.pulse_interval = interval
+        self.pulsing_state = state
+
+
+    def stop_pulsing(self):
+        self.pulse_interval = None
+        self.pulsing_state = None
+        self.go_to_neutral()
+
+
     def update(self):
-        if self.entered_state_time is not None:
-            seconds_in_state = (rospy.Time.now() - self.entered_state_time).to_sec()
+        if self.pulse_interval is not None:
+            if self.current_pulse_start is None:
+                self.current_pulse_start = rospy.Time.now()
 
-            if self.current_state == self.state_fill_with_air:
-                if seconds_in_state > config.BALLAST_AIR_FILL_TIME_SECONDS:
+            if (rospy.Time.now() - self.current_pulse_start).to_sec() > self.pulse_interval:
+                self.current_pulse_start = rospy.Time.now()
+                if self.current_state == self.pulsing_state:
                     self.go_to_neutral()
+                elif self.pulsing_state == self.state_fill_with_air:
+                    self.start_filling_ballast_with_air()
+                elif self.pulsing_state == self.state_empty_ballast_air:
+                    self.start_emptying_ballast_air()
 
-            elif self.current_state == self.state_empty_ballast_air:
-                if seconds_in_state > config.BALLAST_AIR_EMPTY_TIME_SECONDS:
+        else:
+            if self.entered_state_time is not None:
+                seconds_in_state = (rospy.Time.now() - self.entered_state_time).to_sec()
+
+                if self.current_state == self.state_fill_with_air:
+                    if seconds_in_state > config.BALLAST_AIR_FILL_TIME_SECONDS:
+                        self.go_to_neutral()
+
+                elif self.current_state == self.state_empty_ballast_air:
+                    if seconds_in_state > config.BALLAST_AIR_EMPTY_TIME_SECONDS:
+                        self.go_to_neutral()
+
+                elif self.current_state == self.state_neutral:
                     self.go_to_neutral()
-
-            elif self.current_state == self.state_neutral:
-                self.go_to_neutral()
 
 
     def publish_servo_position(self, position, servo_index):

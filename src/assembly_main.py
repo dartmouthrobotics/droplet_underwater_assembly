@@ -29,7 +29,6 @@ import stag_ros.srv
 
 import droplet_underwater_assembly.msg
 
-
 LATEST_MARKER_MESSAGE = None
 RAW_VELOCITY_HISTORY = []
 RUNNING_EXPERIMENT = False
@@ -38,12 +37,13 @@ DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
 BALLAST_HANDLER = ballast_handler.BallastHandler()
-#GRIPPER_HANDLER = None
 IS_USING_OPEN_LOOP_CONTROL = False
 
 BINARY_P_CONTROL_SELECTOR = 'BINARY_P'
 OPEN_LOOP_CONTROL_SELECTOR = 'OPEN_LOOP'
 PID_CONTROL_SELECTOR = 'PID'
+GRASP_SELECTOR = 'GRASP'
+BUOYANCY_CHANGE_CONTROL_SELECTOR = 'BUOYANCY_CHANGE'
 
 ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
 
@@ -82,33 +82,33 @@ latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
 
-#pid_gains_dict = dict(
-#    x_p=4.00,
-#    y_p=4.00,
-#    yaw_p=2.35, 
-#    x_d=-1.0, 
-#    y_d=-0.25,
-#    yaw_d=1.0,
-#    x_i=config.DEFAULT_X_I_GAIN,
-#    y_i=config.DEFAULT_Y_I_GAIN,
-#    yaw_i=0.15,
-#    roll_p=-0.3,
-#    roll_i=0.0,
-#    roll_d=1.0,
-#    z_p=3.5,
-#    z_i=config.DEFAULT_Z_I_GAIN,
-#    z_d=-0.50,
-#    pitch_p=-1.0,
-#    pitch_i=0.0,
-#    pitch_d=0.75,
-#) 
+pid_gains_dict = dict(
+    x_p=3.00,
+    y_p=3.00,
+    yaw_p=2.35, 
+    x_d=-1.0, 
+    y_d=-0.25,
+    yaw_d=1.0,
+    x_i=config.DEFAULT_X_I_GAIN,
+    y_i=config.DEFAULT_Y_I_GAIN,
+    yaw_i=0.15,
+    roll_p=1.0,
+    roll_i=0.0,
+    roll_d=-0.50,
+    z_p=0.80,
+    z_i=config.DEFAULT_Z_I_GAIN,
+    z_d=-2.25,
+    pitch_p=-1.0,
+    pitch_i=0.0,
+    pitch_d=0.50,
+) 
 #pid_gains_dict = dict( # single gain for debugging
 #    x_p=0.00,
 #    y_p=0.00,
 #    yaw_p=0.00, 
 #    x_d=0.0, 
 #    y_d=0.0,
-#    yaw_d=1.0,
+#    yaw_d=0.0,
 #    x_i=0.0,
 #    y_i=0.0,
 #    yaw_i=0.0,
@@ -118,30 +118,12 @@ transform_broadcaster = None
 #    z_p=0.0,
 #    z_i=0.0,
 #    z_d=0.00,
-#    pitch_p=0.0,
+#    pitch_p=1.0,
 #    pitch_i=0.0,
 #    pitch_d=0.00,
 #) 
-pid_gains_dict = dict(
-    x_p=1.25,
-    y_p=1.25,
-    yaw_p=1.95, 
-    x_d=-0.50, 
-    y_d=0.00,
-    yaw_d=0.2,
-    x_i=0.1,
-    y_i=0.1,
-    yaw_i=0.15,
-    roll_p=2.0,
-    roll_i=0.0,
-    roll_d=-1.0,
-    z_p=2.00,
-    z_i=config.DEFAULT_Z_I_GAIN,
-    z_d=-1.50,
-    pitch_p=2.0,
-    pitch_i=0.0,
-    pitch_d=-1.00,
-) 
+
+# what is the simplest way to handle the problem of setting buoyancy
 
 CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
     **pid_gains_dict
@@ -166,17 +148,42 @@ binary_gains = dict(
     yaw_i=0.00,
     roll_p=-0.3,
     roll_i=0.0,
-    roll_d=1.0,
+    roll_d=0.0,
     z_p=4.5,
     z_i=0.0,
     z_d=0.00,
     pitch_p=-2.0,
     pitch_i=0.0,
-    pitch_d=0.75,
+    pitch_d=0.00,
 ) 
+
+buoyancy_change_gains = dict(
+    x_p=3.00,
+    y_p=3.00,
+    yaw_p=2.00, 
+    x_d=0.0, 
+    y_d=0.0,
+    yaw_d=0.1,
+    x_i=0,
+    y_i=0,
+    yaw_i=0.00,
+    roll_p=-0.3,
+    roll_i=0.0,
+    roll_d=0.0,
+    z_p=4.5,
+    z_i=0.0,
+    z_d=0.00,
+    pitch_p=-2.0,
+    pitch_i=0.0,
+    pitch_d=0.00,
+)
 
 BINARY_P_TRACKER = trajectory_tracker.PIDTracker(
     **binary_gains
+)
+
+BUOYANCY_CHANGE_TRACKER = trajectory_tracker.PIDTraker(
+    **buoyancy_change_gains
 )
 
 LATEST_VELOCITY = None
@@ -184,22 +191,6 @@ LATEST_VELOCITY = None
 TRAJECTORY_TRACKER = CLOSED_LOOP_TRACKER
 
 HAVE_ANY_MARKER_READING = False
-
-# gonna need many build platforms. Maybe I can wait on that?
-
-#ACTIONS = [
-#    assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
-#    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
-#    assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.TIGHT_POSE_TOLERANCE),
-#    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=5),
-#    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
-#    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.ULTRA_COARSE_POSE_TOLERANCE),
-#    #assembly_action.AssemblyAction('change_platforms', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0], to_platform_id=0),
-#    #assembly_action.AssemblyAction('binary_P_move', config.CENTER_BACK_POSE, config.BINARY_P_POSE_TOLERANCE),
-#    #assembly_action.AssemblyAction('move', config.CENTER_BACK_POSE, config.COARSE_POSE_TOLERANCE)
-#]
-
 
 def imu_callback(imu_message):
     global latest_imu_message
@@ -276,6 +267,31 @@ def update_closed_loop_controller(current_action):
     TRAJECTORY_TRACKER.set_current_velocity(latest_vel_avg)
 
 
+def update_buoyancy_change_controller(current_action):
+    BUOYANCY_CHANGE_CONTROLLER.set_goal_position(current_action.goal_pose)
+    goal_pose_publisher.publish(
+        utils.pose_stamped_from_xyzrpy(
+            xyzrpy=current_action.goal_pose,
+            frame_id="/world",
+            seq=0,
+            stamp=rospy.Time.now()
+        )
+    )
+
+
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+
+    if LATEST_VELOCITY is not None:
+        VELOCITY_HISTORY.append(LATEST_VELOCITY)
+    
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+    robot_pose_xyzrpy = get_robot_pose_xyzrpy()
+
+    BUOYANCY_CHANGE_CONTROLLER.set_latest_imu_reading(latest_imu_message)
+    BUOYANCY_CHANGE_CONTROLLER.set_current_position(robot_pose_xyzrpy)
+    BUOYANCY_CHANGE_CONTROLLER.set_current_velocity(latest_vel_avg)
+
+
 def update_open_loop_controller(current_action):
     TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
     latest_vel_avg = get_latest_velocity_xyzrpy()
@@ -297,7 +313,6 @@ def update_binary_P_controller(current_action):
         )
     )
 
-
     latest_vel_avg = get_latest_velocity_xyzrpy()
 
     if LATEST_VELOCITY is not None:
@@ -310,7 +325,6 @@ def update_binary_P_controller(current_action):
     BINARY_P_TRACKER.set_current_position(robot_pose_xyzrpy)
     BINARY_P_TRACKER.set_current_velocity(latest_vel_avg)
 
-# how do we want to decide when the open loop controller should stop?
 
 def act_on_current_action(current_action, pose_error):
     global ACTIVE_CONTROLLER, LAST_TRACKED_MARKER_TIME
@@ -319,7 +333,8 @@ def act_on_current_action(current_action, pose_error):
 
     started = False
     if not current_action.is_started:
-        tolerance = config.TIGHT_POSE_TOLERANCE
+        #tolerance = config.TIGHT_POSE_TOLERANCE
+        tolerance = config.COARSE_POSE_TOLERANCE
         reached_goal = all([abs(error) < tol for (error, tol) in zip(pose_error, tolerance)])
 
         if current_action.action_type == 'open_gripper':
@@ -346,6 +361,16 @@ def act_on_current_action(current_action, pose_error):
 
             if DISPLAY is not None:
                 DISPLAY.update_led_state([255,125,0],1)
+
+        elif current_action.action_type == 'inflate_ballast':
+            current_action.ballast_handler.start_filling_ballast_with_air()
+            current_action.start()
+            started = True
+
+        elif current_action.action_type == 'deflate_ballast':
+            current_action.ballast_handler.start_emptying_ballast_air()
+            current_action.start()
+            started = True
 
         elif current_action.action_type == 'change_platforms':
             config.TRACKED_MARKER_ID = current_action.to_platform_id
@@ -391,6 +416,27 @@ def act_on_current_action(current_action, pose_error):
 
             current_action.start()
             started = True
+
+        elif current_action.action_type == 'change_buoyancy':
+            ACTIVE_CONTROLLER = BUOYANCY_CHANGE_CONTROL_SELECTOR
+            ACTIVE_CONTROLLER.set_z_override(
+                float(current_action.ballast_change_direction) * (
+                    current_action.ballast_change_t_level_from_planner * config.MAX_EFFORT_BUOYANCY_CHANGE
+                )
+            )
+            if current_action.ballast_change_direction > 0:
+                BALLAST_HANDLER.start_pulsing(
+                    state=BALLAST_HANDLER.state_fill_with_air,
+                    interval=config.BALLAST_AIR_IN_PULSE_TIME
+                )
+            else:
+                BALLAST_HANDLER.start_pulsing(
+                    state=BALLAST_HANDLER.state_fill_with_air,
+                    interval=config.BALLAST_AIR_IN_PULSE_TIME
+                )
+
+            current_action.start()
+            started = True
         else:
             raise Exception("Unrecognized action type!")
 
@@ -399,6 +445,8 @@ def act_on_current_action(current_action, pose_error):
     else:
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
             rospy.loginfo("Completed action: {}. Error: {}. Tolerance {}".format(current_action, pose_error, current_action.pose_tolerance))
+            if current_action.action_type == 'change_buoyancy':
+                BALLAST_HANDLER.stop_pulsing()
 
             if len(ACTIONS) > 0:
                 return True, ACTIONS.pop(0)
@@ -416,6 +464,8 @@ def update_active_controller(current_action):
         update_closed_loop_controller(current_action)
     elif ACTIVE_CONTROLLER == BINARY_P_CONTROL_SELECTOR:
         update_binary_P_controller(current_action)
+    elif ACTIVE_CONTROLLER == BUOYANCY_CHANGE_CONTROL_SELECTOR:
+        update_buoyancy_change_controller(current_action)
     else:
         raise Exception("Unrecognized active control selector!")
 
@@ -482,7 +532,7 @@ def run_build_plan(rc_override_publisher):
             raise Exception("Unrecognized active control selector!")
         if DISPLAY is not None:
             if LAST_ERROR_DISPLAY is None or (rospy.Time.now() - LAST_ERROR_DISPLAY).to_sec() > ERROR_DISPLAY_RATE:
-                DISPLAY.update_lcd_display("{} / {}".format(current_action.sequence_id, number_actions), "{:0.1f} {:0.1f} {:0.2f}".format(*pose_error[3:6]))
+                DISPLAY.update_lcd_display("{} / {}".format(current_action.sequence_id, number_actions), "{:0.1f} {:0.1f} {:0.2f}".format(*pose_error[0:3]))
                 LAST_ERROR_DISPLAY = rospy.Time.now()
 
         changed = False
@@ -547,103 +597,6 @@ def wait_for_marker_data():
 
         BALLAST_HANDLER.update()
         poll_rate.sleep()
-
-
-def construct_tolerance_motion_experiment(cube_dimensions, cube_center, n_samples_per_tol, tol_step, tol_range, cutoff_seconds):
-    actions = []
-
-    initial_tolerance = [
-        tol_range[1],
-        tol_range[1],
-        0.03,
-        1000.0,
-        1000.0,
-        0.017
-    ]
-
-    tol_samples = []
-
-    n_tolerance_steps = int((tol_range[1] - tol_range[0]) / tol_step)
-
-    for tol_step_x in range(n_tolerance_steps):
-        for tol_step_y in range(n_tolerance_steps):
-            tol_samples.append(
-                [
-                    initial_tolerance[0] - float(tol_step_x) * tol_step,
-                    initial_tolerance[1] - float(tol_step_y) * tol_step,
-                    initial_tolerance[2],
-                    initial_tolerance[3],
-                    initial_tolerance[4],
-                    initial_tolerance[5],
-                ]
-            )
-
-    rospy.loginfo("Sampling {} tolerances".format(tol_samples))
-
-    goal_moves_with_tol = []
-    
-    pt_1 = list(cube_center)
-    pt_1[1] = pt_1[1] + 0.20
-    pt_2 = list(cube_center)
-    pt_2[0] = pt_2[0] + 0.20
-
-    move_triangle = [
-        cube_center,
-        pt_1,
-        pt_2
-    ]
-
-    assert(n_samples_per_tol == 3)
-    for sample in tol_samples:
-        for goal_idx in range(n_samples_per_tol):
-            next_point = move_triangle[goal_idx]
-
-            goal_move = [
-                next_point[0],
-                next_point[1],
-                next_point[2],
-                0.0,
-                0.0,
-                0.0,
-            ]
-
-            goal_moves_with_tol.append(
-                (goal_move, sample)
-            )
-
-    rospy.loginfo("Number moves {}".format(len(goal_moves_with_tol)))
-    new_action = assembly_action.AssemblyAction(
-        action_type="move",
-        goal_pose=[move_triangle[2][0], move_triangle[2][1], move_triangle[2][2], 0.0, 0.0, 0.0],
-        pose_tolerance=initial_tolerance,
-        position_hold_time=6.0
-    )
-
-    for move, tol in goal_moves_with_tol:
-        new_action = assembly_action.AssemblyAction(
-            action_type="move",
-            goal_pose=move,
-            pose_tolerance=tol,
-            position_hold_time=6.0
-        )
-
-        actions.append(new_action)
-
-        new_action = assembly_action.AssemblyAction(
-            action_type="move",
-            goal_pose=move,
-            pose_tolerance=tol,
-            position_hold_time=0.0
-        )
-
-        new_action.timeout = cutoff_seconds
-        actions.append(new_action)
-
-    for idx, action in enumerate(actions):
-        action.high_level_build_step = "TOL_SAMPLING"
-        action.sequence_id = idx
-
-    return actions
 
 
 def main():
@@ -712,15 +665,6 @@ def main():
         start_platform=config.TRACKED_MARKER_ID,
     )
 
-    #ACTIONS = construct_tolerance_motion_experiment(
-    #    cube_dimensions=[0.5,0.5,0.5,0.15],
-    #    cube_center=[-1.6, -0.3, -0.3, 0.0],
-    #    n_samples_per_tol=3,
-    #    tol_step=0.0025,
-    #    tol_range=[0.0075,0.03],
-    #    cutoff_seconds=90.0
-    #)
-
     rospy.loginfo("Actions to complete:")
     for idx, action in enumerate(ACTIONS):
         rospy.loginfo("    {}: {}".format(idx, action))
@@ -740,6 +684,7 @@ def main():
 
     for action in ACTIONS:
         action.gripper_handler = GRIPPER_HANDLER
+        action.ballast_handler = BALLAST_HANDLER
         
         if action.high_level_build_step is None:
             raise Exception("Action {} is not associated with a high level build step!".format(action))
@@ -747,11 +692,6 @@ def main():
     SET_TRACKED_BUNDLE_IDS_PROXY(
         tracked_bundle_ids=[config.TRACKED_MARKER_ID]
     )
-
-    if not DRY_RUN:
-        BALLAST_HANDLER.start_filling_ballast_with_air()
-        #BALLAST_HANDLER.start_emptying_ballast_air()
-
 
     run_build_plan(
         rc_override_publisher

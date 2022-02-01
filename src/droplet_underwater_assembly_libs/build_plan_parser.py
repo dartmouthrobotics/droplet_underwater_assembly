@@ -277,6 +277,7 @@ class BuildPlanParser(object):
 
                         last_pose = parsed_actions[-1].goal_pose 
                         parsed_actions[-1].high_level_build_step = line
+
                     elif command.startswith("HOLD"):
                         hold_time = float(command.split(" ")[1].strip())
 
@@ -307,6 +308,72 @@ class BuildPlanParser(object):
                             )
                         )
                         parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("INFLATE_BALLAST"):
+                        parsed_actions.append(
+                            assembly_action.AssemblyAction(
+                                'inflate_ballast',
+                                last_pose,
+                                config.COARSE_POSE_TOLERANCE,
+                                position_hold_time=0.0
+                            )
+                        )
+                        parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("CHANGE_BUOYANCY")
+                        # t_level # z
+                        tokens = command.split(" ")[1:] 
+                        t_level = float(tokens[0])
+                        z = float(tokens[1])
+                        direction = int(token[2])
+
+                        new_pose = last_pose
+                        new_action = assembly_action.AssemblyAction(
+                            'change_buoyancy',
+                            new_pose[2] = z,
+                            config.COARSE_POSE_TOLERANCE,
+                            position_hold_time=0.0,
+                            t_level_from_planner=t_level,
+                            ballast_change_direction=direction 
+                        )
+
+                        parsed_actions.append(new_action)
+                        parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("DEFLATE_BALLAST"):
+                        parsed_actions.append(
+                            assembly_action.AssemblyAction(
+                                'deflate_ballast',
+                                last_pose,
+                                config.COARSE_POSE_TOLERANCE,
+                                position_hold_time=0.0
+                            )
+                        )
+                        parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("OPEN_GRIPPER"):
+                        parsed_actions.append(
+                            assembly_action.AssemblyAction(
+                                'open_gripper',
+                                last_pose,
+                                config.COARSE_POSE_TOLERANCE,
+                                position_hold_time=0.0
+                            )
+                        )
+                        
+                        parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("CLOSE_GRIPPER"):
+                        parsed_actions.append(
+                            assembly_action.AssemblyAction(
+                                'close_gripper',
+                                last_pose,
+                                config.COARSE_POSE_TOLERANCE,
+                                position_hold_time=0.0
+                            )
+                        )
+                        parsed_actions[-1].high_level_build_step = line
+
                     else:
                         raise Exception("Unrecognized command in line {}: {}".format(line_number, line))
 

@@ -1,5 +1,5 @@
-ROBOT_WIFI_NET="droplet-net"
-ROBOT_WIFI_PASSWORD="droplet1"
+ROBOT_WIFI_NET="bluerov-companion-net"
+ROBOT_WIFI_PASSWORD="BlueROV2"
 
 CURRENT_WIFI=$(iwgetid -r)
 

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-LOCAL_CATKIN_WORKSPACE="/home/sam/Dev/ros-catkin-workspace"
+LOCAL_CATKIN_WORKSPACE="/home/${USER}/Dev/ros-catkin-workspace"
 LOCAL_CATKIN_INSTALL_SPACE="${LOCAL_CATKIN_WORKSPACE}/install"
 ROBOT_CATKIN_WORKSPACE="/home/bluerov/catkin-workspace"
 ROBOT_WIFI_NET="bluerov-companion-net"
@@ -40,10 +40,13 @@ cd ${CURRENT_DIR}
 echo "Successfully created tarball."
 
 echo "Installing tarball..."
-scp ${LOCAL_CATKIN_WORKSPACE}/${TARBALL_NAME} bluerov:${ROBOT_TARBALL_DESTINATION}
-ssh bluerov "rm -rf ${ROBOT_CATKIN_WORKSPACE}/install"
-ssh bluerov "cd ${ROBOT_TARBALL_DESTINATION} && tar -xzf ${TARBALL_NAME} && mv install ${ROBOT_CATKIN_WORKSPACE}/install"
+scp ${LOCAL_CATKIN_WORKSPACE}/${TARBALL_NAME} bluerov@bluerov:${ROBOT_TARBALL_DESTINATION}
+ssh bluerov@bluerov "rm -rf ${ROBOT_CATKIN_WORKSPACE}/install"
+ssh bluerov@bluerov "cd ${ROBOT_TARBALL_DESTINATION} && tar -xzf ${TARBALL_NAME} && mv install ${ROBOT_CATKIN_WORKSPACE}/install"
 echo "New install space copied!"
+
+# TODO have the app directly in the package
+scp ${LOCAL_CATKIN_WORKSPACE}/GeminiMultibeamSonar/bin/GeminiSDKConsoleApp bluerov@bluerov:${ROBOT_CATKIN_WORKSPACE}/install/share/gemini_multibeam_ros/
 
 echo "Removing local copy of tarball"
 rm ${LOCAL_CATKIN_WORKSPACE}/${TARBALL_NAME}
