@@ -57,13 +57,16 @@ class BallastHandler(object):
         )
 
 
-    def start_pulsing(self, state, interval):
+    def start_pulsing(self, state, neutral_time, on_time):
         # go between the given state and neutral repeatedly
         assert(
-            state in [self.state_fill_with_air, self.state_empty_ballast_air, self.state_neutral]
+            state in [self.state_fill_with_air, self.state_empty_ballast_air]
         )
 
-        self.pulse_interval = interval
+        self.pulse_interval = on_time
+        self.neutral_pulse_time = neutral_time
+        self.air_in_pulse_time = on_time
+        self.air_out_pulse_time = on_time
         self.pulsing_state = state
 
 
@@ -80,11 +83,15 @@ class BallastHandler(object):
 
             if (rospy.Time.now() - self.current_pulse_start).to_sec() > self.pulse_interval:
                 self.current_pulse_start = rospy.Time.now()
+
                 if self.current_state == self.pulsing_state:
+                    self.pulse_interval = self.neutral_pulse_time
                     self.go_to_neutral()
                 elif self.pulsing_state == self.state_fill_with_air:
+                    self.pulse_interval = self.air_in_pulse_time
                     self.start_filling_ballast_with_air()
                 elif self.pulsing_state == self.state_empty_ballast_air:
+                    self.pulse_interval = self.air_out_pulse_time
                     self.start_emptying_ballast_air()
 
         else:

@@ -37,7 +37,6 @@ DRY_RUN = True
 TIMES_TRACKED_MARKER_SEEN = 0
 GRIPPER_HANDLER = gripper_handler.GripperHandler()
 BALLAST_HANDLER = ballast_handler.BallastHandler()
-IS_USING_OPEN_LOOP_CONTROL = False
 
 BINARY_P_CONTROL_SELECTOR = 'BINARY_P'
 OPEN_LOOP_CONTROL_SELECTOR = 'OPEN_LOOP'
@@ -82,10 +81,11 @@ latest_imu_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
 
+DEFAULT_Z_P = 1.0 
 pid_gains_dict = dict(
     x_p=3.00,
     y_p=3.00,
-    yaw_p=2.35, 
+    yaw_p=2.00, 
     x_d=-1.0, 
     y_d=-0.25,
     yaw_d=1.0,
@@ -95,9 +95,9 @@ pid_gains_dict = dict(
     roll_p=1.0,
     roll_i=0.0,
     roll_d=-0.50,
-    z_p=0.80,
+    z_p=DEFAULT_Z_P,
     z_i=config.DEFAULT_Z_I_GAIN,
-    z_d=-2.25,
+    z_d=0.00,
     pitch_p=-1.0,
     pitch_i=0.0,
     pitch_d=0.50,
@@ -115,10 +115,10 @@ pid_gains_dict = dict(
 #    roll_p=0.0,
 #    roll_i=0.0,
 #    roll_d=0.0,
-#    z_p=0.0,
+#    z_p=1.0,
 #    z_i=0.0,
 #    z_d=0.00,
-#    pitch_p=1.0,
+#    pitch_p=0.0,
 #    pitch_i=0.0,
 #    pitch_d=0.00,
 #) 
@@ -157,23 +157,43 @@ binary_gains = dict(
     pitch_d=0.00,
 ) 
 
+#buoyancy_change_gains = dict(
+#    x_p=3.00,
+#    y_p=3.00,
+#    yaw_p=2.35, 
+#    x_d=-1.0, 
+#    y_d=-0.25,
+#    yaw_d=1.0,
+#    x_i=config.DEFAULT_X_I_GAIN,
+#    y_i=config.DEFAULT_Y_I_GAIN,
+#    yaw_i=0.15,
+#    roll_p=1.0,
+#    roll_i=0.0,
+#    roll_d=-0.50,
+#    z_p=0.70,
+#    z_i=0.0,
+#    z_d=0.00,
+#    pitch_p=-1.0,
+#    pitch_i=0.0,
+#    pitch_d=0.50,
+#)
 buoyancy_change_gains = dict(
-    x_p=3.00,
-    y_p=3.00,
-    yaw_p=2.00, 
-    x_d=0.0, 
-    y_d=0.0,
-    yaw_d=0.1,
-    x_i=0,
-    y_i=0,
+    x_p=2.00,
+    y_p=2.00,
+    yaw_p=2.40, 
+    x_d=-0.0, 
+    y_d=-0.00,
+    yaw_d=1.0,
+    x_i=0.0,
+    y_i=0.0,
     yaw_i=0.00,
-    roll_p=-0.3,
+    roll_p=0.0,
     roll_i=0.0,
-    roll_d=0.0,
-    z_p=4.5,
+    roll_d=-0.00,
+    z_p=0.77,
     z_i=0.0,
     z_d=0.00,
-    pitch_p=-2.0,
+    pitch_p=-0.0,
     pitch_i=0.0,
     pitch_d=0.00,
 )
@@ -182,13 +202,13 @@ BINARY_P_TRACKER = trajectory_tracker.PIDTracker(
     **binary_gains
 )
 
-BUOYANCY_CHANGE_TRACKER = trajectory_tracker.PIDTraker(
+BUOYANCY_CHANGE_TRACKER = trajectory_tracker.PIDTracker(
     **buoyancy_change_gains
 )
 
 LATEST_VELOCITY = None
 
-TRAJECTORY_TRACKER = CLOSED_LOOP_TRACKER
+CLOSED_LOOP_TRACKER
 
 HAVE_ANY_MARKER_READING = False
 
@@ -196,7 +216,7 @@ def imu_callback(imu_message):
     global latest_imu_message
     latest_imu_message = imu_message
 
-    TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
+    CLOSED_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
 
 
 def marker_callback(marker_message):
@@ -243,7 +263,7 @@ def get_robot_pose_xyzrpy():
 
 
 def update_closed_loop_controller(current_action):
-    TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
+    CLOSED_LOOP_TRACKER.set_goal_position(current_action.goal_pose)
     goal_pose_publisher.publish(
         utils.pose_stamped_from_xyzrpy(
             xyzrpy=current_action.goal_pose,
@@ -262,13 +282,13 @@ def update_closed_loop_controller(current_action):
     latest_vel_avg = get_latest_velocity_xyzrpy()
     robot_pose_xyzrpy = get_robot_pose_xyzrpy()
 
-    TRAJECTORY_TRACKER.set_latest_imu_reading(latest_imu_message)
-    TRAJECTORY_TRACKER.set_current_position(robot_pose_xyzrpy)
-    TRAJECTORY_TRACKER.set_current_velocity(latest_vel_avg)
+    CLOSED_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
+    CLOSED_LOOP_TRACKER.set_current_position(robot_pose_xyzrpy)
+    CLOSED_LOOP_TRACKER.set_current_velocity(latest_vel_avg)
 
 
 def update_buoyancy_change_controller(current_action):
-    BUOYANCY_CHANGE_CONTROLLER.set_goal_position(current_action.goal_pose)
+    BUOYANCY_CHANGE_TRACKER.set_goal_position(current_action.goal_pose)
     goal_pose_publisher.publish(
         utils.pose_stamped_from_xyzrpy(
             xyzrpy=current_action.goal_pose,
@@ -287,13 +307,13 @@ def update_buoyancy_change_controller(current_action):
     latest_vel_avg = get_latest_velocity_xyzrpy()
     robot_pose_xyzrpy = get_robot_pose_xyzrpy()
 
-    BUOYANCY_CHANGE_CONTROLLER.set_latest_imu_reading(latest_imu_message)
-    BUOYANCY_CHANGE_CONTROLLER.set_current_position(robot_pose_xyzrpy)
-    BUOYANCY_CHANGE_CONTROLLER.set_current_velocity(latest_vel_avg)
+    BUOYANCY_CHANGE_TRACKER.set_latest_imu_reading(latest_imu_message)
+    BUOYANCY_CHANGE_TRACKER.set_current_position(robot_pose_xyzrpy)
+    BUOYANCY_CHANGE_TRACKER.set_current_velocity(latest_vel_avg)
 
 
 def update_open_loop_controller(current_action):
-    TRAJECTORY_TRACKER.set_goal_position(current_action.goal_pose)
+    CLOSED_LOOP_TRACKER.set_goal_position(current_action.goal_pose)
     latest_vel_avg = get_latest_velocity_xyzrpy()
     robot_pose_xyzrpy = get_robot_pose_xyzrpy()
 
@@ -326,6 +346,20 @@ def update_binary_P_controller(current_action):
     BINARY_P_TRACKER.set_current_velocity(latest_vel_avg)
 
 
+def get_effort_for_buoyancy_change(current_action):
+    direction = current_action.ballast_change_direction
+    tlevel = current_action.ballast_change_t_level
+    min_effort_up = 0.05
+    min_effort_down = 0.10
+
+    if (direction > 0):
+        max_effort = ((1.0 + min_effort_up) - tlevel) * config.MAX_EFFORT_BUOYANCY_CHANGE 
+    if (direction < 0):
+        max_effort = -1.0*max(tlevel, min_effort_down) * config.MAX_EFFORT_BUOYANCY_CHANGE 
+
+    return max_effort
+
+
 def act_on_current_action(current_action, pose_error):
     global ACTIVE_CONTROLLER, LAST_TRACKED_MARKER_TIME
 
@@ -333,8 +367,8 @@ def act_on_current_action(current_action, pose_error):
 
     started = False
     if not current_action.is_started:
-        #tolerance = config.TIGHT_POSE_TOLERANCE
-        tolerance = config.COARSE_POSE_TOLERANCE
+        tolerance = config.TIGHT_POSE_TOLERANCE
+        #tolerance = config.COARSE_POSE_TOLERANCE
         reached_goal = all([abs(error) < tol for (error, tol) in zip(pose_error, tolerance)])
 
         if current_action.action_type == 'open_gripper':
@@ -342,10 +376,11 @@ def act_on_current_action(current_action, pose_error):
             if reached_goal:
                 GRIPPER_HANDLER.start_opening_fingers()
                 current_action.start()
-                TRAJECTORY_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
-                TRAJECTORY_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
-                TRAJECTORY_TRACKER.x_i = config.DEFAULT_X_I_GAIN
-                TRAJECTORY_TRACKER.clear_error_integrals()
+                CLOSED_LOOP_TRACKER.z_i = 0.0
+                CLOSED_LOOP_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
+                CLOSED_LOOP_TRACKER.x_i = config.DEFAULT_X_I_GAIN
+                CLOSED_LOOP_TRACKER.clear_error_integrals()
+                CLOSED_LOOP_TRACKER.z_p = 0.05
                 started = True
 
         elif current_action.action_type == 'close_gripper':
@@ -353,10 +388,17 @@ def act_on_current_action(current_action, pose_error):
             if reached_goal:
                 GRIPPER_HANDLER.start_closing_fingers()
                 current_action.start()
-                TRAJECTORY_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
-                TRAJECTORY_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
-                TRAJECTORY_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
-                TRAJECTORY_TRACKER.clear_error_integrals()
+                CLOSED_LOOP_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
+                CLOSED_LOOP_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
+                CLOSED_LOOP_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
+                
+                CLOSED_LOOP_TRACKER.x_p = 0.1
+                CLOSED_LOOP_TRACKER.y_p = 0.1
+                CLOSED_LOOP_TRACKER.x_d = 0.1
+                CLOSED_LOOP_TRACKER.y_d = 0.1
+                CLOSED_LOOP_TRACKER.yaw_p = 0.1
+                CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                CLOSED_LOOP_TRACKER.yaw_d = 0.1
                 started = True
 
             if DISPLAY is not None:
@@ -376,7 +418,7 @@ def act_on_current_action(current_action, pose_error):
             config.TRACKED_MARKER_ID = current_action.to_platform_id
             ACTIVE_CONTROLLER = OPEN_LOOP_CONTROL_SELECTOR
             LAST_TRACKED_MARKER_TIME = None
-            TRAJECTORY_TRACKER.clear_error_integrals()
+            CLOSED_LOOP_TRACKER.clear_error_integrals()
             SET_TRACKED_BUNDLE_IDS_PROXY(
                 tracked_bundle_ids=[current_action.to_platform_id]
             )
@@ -411,7 +453,7 @@ def act_on_current_action(current_action, pose_error):
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if DISPLAY is not None:
                 DISPLAY.update_led_state([0,0,255],1)
-            
+
             GRIPPER_HANDLER.desired_rotation_position = current_action.wrist_rotation_pwm
 
             current_action.start()
@@ -419,20 +461,26 @@ def act_on_current_action(current_action, pose_error):
 
         elif current_action.action_type == 'change_buoyancy':
             ACTIVE_CONTROLLER = BUOYANCY_CHANGE_CONTROL_SELECTOR
-            ACTIVE_CONTROLLER.set_z_override(
-                float(current_action.ballast_change_direction) * (
-                    current_action.ballast_change_t_level_from_planner * config.MAX_EFFORT_BUOYANCY_CHANGE
-                )
+            CLOSED_LOOP_TRACKER.clear_error_integrals()
+
+            max_effort = get_effort_for_buoyancy_change(current_action)
+
+            BUOYANCY_CHANGE_TRACKER.set_z_override(
+                max_effort
             )
+
             if current_action.ballast_change_direction > 0:
+                GRIPPER_HANDLER.start_closing_fingers()
                 BALLAST_HANDLER.start_pulsing(
                     state=BALLAST_HANDLER.state_fill_with_air,
-                    interval=config.BALLAST_AIR_IN_PULSE_TIME
+                    neutral_time=config.BALLAST_AIR_IN_PULSE_OFF_TIME,
+                    on_time=config.BALLAST_AIR_IN_PULSE_TIME
                 )
             else:
                 BALLAST_HANDLER.start_pulsing(
-                    state=BALLAST_HANDLER.state_fill_with_air,
-                    interval=config.BALLAST_AIR_IN_PULSE_TIME
+                    state=BALLAST_HANDLER.state_empty_ballast_air,
+                    neutral_time=config.BALLAST_AIR_OUT_PULSE_OFF_TIME,
+                    on_time=config.BALLAST_AIR_OUT_PULSE_TIME
                 )
 
             current_action.start()
@@ -445,8 +493,30 @@ def act_on_current_action(current_action, pose_error):
     else:
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
             rospy.loginfo("Completed action: {}. Error: {}. Tolerance {}".format(current_action, pose_error, current_action.pose_tolerance))
+
             if current_action.action_type == 'change_buoyancy':
                 BALLAST_HANDLER.stop_pulsing()
+                max_eff = get_effort_for_buoyancy_change(current_action)
+                CLOSED_LOOP_TRACKER.clear_error_integrals(prev_buoyancy_input=max_eff)
+            if current_action.action_type == 'open_gripper':
+                CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
+                CLOSED_LOOP_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
+                CLOSED_LOOP_TRACKER.x_p =   pid_gains_dict['x_p']
+                CLOSED_LOOP_TRACKER.y_p =   pid_gains_dict['y_p']
+                CLOSED_LOOP_TRACKER.x_d =   pid_gains_dict['x_d']
+                CLOSED_LOOP_TRACKER.y_d =   pid_gains_dict['y_d']
+                CLOSED_LOOP_TRACKER.yaw_p = pid_gains_dict['yaw_p']
+                CLOSED_LOOP_TRACKER.yaw_i = pid_gains_dict['yaw_i']
+                CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
+
+            if current_action.action_type == 'close_gripper':
+                CLOSED_LOOP_TRACKER.x_p =   pid_gains_dict['x_p']
+                CLOSED_LOOP_TRACKER.y_p =   pid_gains_dict['y_p']
+                CLOSED_LOOP_TRACKER.x_d =   pid_gains_dict['x_d']
+                CLOSED_LOOP_TRACKER.y_d =   pid_gains_dict['y_d']
+                CLOSED_LOOP_TRACKER.yaw_p = pid_gains_dict['yaw_p']
+                CLOSED_LOOP_TRACKER.yaw_i = pid_gains_dict['yaw_i']
+                CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
 
             if len(ACTIONS) > 0:
                 return True, ACTIONS.pop(0)
@@ -528,6 +598,8 @@ def run_build_plan(rc_override_publisher):
             pose_error = CLOSED_LOOP_TRACKER.get_error()
         elif ACTIVE_CONTROLLER == BINARY_P_CONTROL_SELECTOR:
             pose_error = BINARY_P_TRACKER.get_error()
+        elif ACTIVE_CONTROLLER == BUOYANCY_CHANGE_CONTROL_SELECTOR:
+            pose_error = BUOYANCY_CHANGE_TRACKER.get_error()
         else:
             raise Exception("Unrecognized active control selector!")
         if DISPLAY is not None:
@@ -557,6 +629,8 @@ def run_build_plan(rc_override_publisher):
             go_message = CLOSED_LOOP_TRACKER.get_next_rc_override()
         elif ACTIVE_CONTROLLER == BINARY_P_CONTROL_SELECTOR:
             go_message = BINARY_P_TRACKER.get_next_rc_override()
+        elif ACTIVE_CONTROLLER == BUOYANCY_CHANGE_CONTROL_SELECTOR:
+            go_message = BUOYANCY_CHANGE_TRACKER.get_next_rc_override()
         else:
             raise Exception("Unrecognized active control selector!")
 
@@ -700,6 +774,7 @@ def main():
     rospy.loginfo("Finished experiment!")
 
     if not DRY_RUN:
+        GRIPPER_HANDLER.stop()
         BALLAST_HANDLER.start_emptying_ballast_air()
 
 

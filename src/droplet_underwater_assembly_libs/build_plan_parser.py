@@ -320,17 +320,22 @@ class BuildPlanParser(object):
                         )
                         parsed_actions[-1].high_level_build_step = line
 
-                    elif command.startswith("CHANGE_BUOYANCY")
+                    elif command.startswith("CHANGE_BUOYANCY"):
                         # t_level # z
                         tokens = command.split(" ")[1:] 
                         t_level = float(tokens[0])
                         z = float(tokens[1])
-                        direction = int(token[2])
+                        direction = int(tokens[2])
 
-                        new_pose = last_pose
+                        new_pose = list(last_pose)
+                        new_pose[2] = z
+                        print("Creating new pose: {}".format(new_pose))
+                        print("Direction", direction)
+                        print("t_level", t_level)
+
                         new_action = assembly_action.AssemblyAction(
                             'change_buoyancy',
-                            new_pose[2] = z,
+                            new_pose,
                             config.COARSE_POSE_TOLERANCE,
                             position_hold_time=0.0,
                             t_level_from_planner=t_level,

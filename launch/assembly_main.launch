@@ -13,9 +13,9 @@
 
   <include file="$(find droplet_underwater_assembly)/stag.launch"/>
 
-  <include file="$(find  mini_ahrs_ros)/launch/mini_ahrs_standalone.launch"/>
 
   <group unless="$(arg test)">
+    <include file="$(find  mini_ahrs_ros)/launch/mini_ahrs_standalone.launch"/>
     <include file="$(find droplet_underwater_assembly)/apm.launch" />
 
     <include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
@@ -23,16 +23,16 @@
       <arg name="config_file" value="$(find droplet_underwater_assembly)/param/flir_pool_calibration_1440_1080.yaml"/>
       <arg name="start_nodelet_manager" value="false"/>
       <arg name="color" value="false"/>
-      <arg name="exposure_time" value="8100"/>
+      <arg name="exposure_time" value="8600"/>
     </include>
 
-    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/laser-loc-day-two-drone /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /tf /tf_static /mavros/rc/override /mini_ahrs_ros/imu /goal_pose /droplet_underwater_assembly/build_phase /mavros/imu/static_pressure /mavros/battery"></node>
+    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/calib_pos_buoyancy /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /tf /tf_static /mavros/rc/override /mini_ahrs_ros/imu /goal_pose /droplet_underwater_assembly/build_phase /mavros/imu/static_pressure /mavros/battery"></node>
 
   </group>
 
   <node pkg="droplet_underwater_assembly" output="screen" respawn="false" type="assembly_main.py" name="assembly_main_node" required="true"> 
     <param name="dry_run" type="bool" value="$(arg dry_run)" unless="$(arg test)"/>
     <param name="dry_run" type="bool" value="true" if="$(arg test)"/>
-<param name="build_plan_file" type="string" value="$(find droplet_underwater_assembly)/param/single_location.txt"/>
-</node>
+    <param name="build_plan_file" type="string" value="$(find droplet_underwater_assembly)/param/calibrate_ballast_pos_buoyancy_changes.txt"/>
+  </node>
 </launch>

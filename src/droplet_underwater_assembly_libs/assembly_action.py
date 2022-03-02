@@ -54,20 +54,20 @@ class AssemblyAction(object):
         self.sequence_id = 0
 
         self.timeout = None
-        self.ballast_change_t_level_from_planner = None
+        self.ballast_change_t_level = None
         self.ballast_change_direction = None
 
         if 't_level_from_planner' in kwargs:
-            self.ballast_change_t_level_from_planner = kwargs['t_level_from_planner']
+            self.ballast_change_t_level = kwargs['t_level_from_planner']
 
-        if 'change_direction' in kwargs:
+        if 'ballast_change_direction' in kwargs:
             self.ballast_change_direction = kwargs['ballast_change_direction']
 
         if self.action_type == 'change_buoyancy':
             assert(self.ballast_change_t_level is not None)
             assert(self.ballast_change_direction is not None)
             assert(self.ballast_change_direction in [-1, 1])
-            assert(0.0 <= self.ballast_change_t_level_from_planner <= 1.0)
+            assert(0.0 <= self.ballast_change_t_level  <= 1.0)
 
         if self.action_type == 'move_wrist':
             if 'wrist_rotation_pwm' not in kwargs:
@@ -117,8 +117,8 @@ class AssemblyAction(object):
             # can we do fully deflating or inflating
             # what about 
             return "Change buoyancy direction: {}. tlevel {}".format(
-                self.buoyancy_change_direction,
-                self.ballast_change_t_level_from_planner
+                self.ballast_change_direction,
+                self.ballast_change_t_level
             )
 
         else:
@@ -152,10 +152,10 @@ class AssemblyAction(object):
                 return (rospy.Time.now() - self.reached_goal_time).to_sec() > self.position_hold_time
 
         if self.action_type == 'change_buoyancy':
-            if self.buoyancy_change_direction > 0:
+            if self.ballast_change_direction > 0:
                 # going up
                 return pose_error[2] < 0
-            if self.buoyancy_change_direction < 0:
+            if self.ballast_change_direction < 0:
                 # going down
                 return pose_error[2] > 0
 

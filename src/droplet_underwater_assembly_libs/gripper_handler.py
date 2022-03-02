@@ -27,6 +27,14 @@ class GripperHandler(object):
             config.FINGER_SERVO_INDEX
         )
 
+    def stop(self):
+        self.finger_servo_speed = config.GRIPPER_STOP_PWM
+        self.motion_started_time = None
+        self.publish_servo_position(
+            self.finger_servo_speed,
+            config.FINGER_SERVO_INDEX
+        )
+
     @property
     def is_opening(self):
         return self.finger_servo_speed == config.GRIPPER_OPEN_PWM

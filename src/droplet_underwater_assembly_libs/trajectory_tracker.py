@@ -88,6 +88,7 @@ class PIDTracker(object):
             0.0
         ]
 
+        self.buoyancy_override_hint = None
         self.last_position_update_time = None
         self.latest_imu_reading = None
 
@@ -188,15 +189,24 @@ class PIDTracker(object):
         for dimension in range(6):
             self.error_integral[dimension] = (next_error[dimension] * seconds_since_last_update) + self.error_integral[dimension]
 
+            if dimension == 2 and self.buoyancy_override_hint is not None:
+                # buoyancy override hint is the z override given to the buoyancy change controller
+                # we want this to be high enough that it totals out to the thrust for the z axis from the buoyancy changer
+                # the thrust is equal to z_p * override
+                hint_thrust = self.z_p * self.buoyancy_override_hint
+                self.error_integral[dimension] = hint_thrust / self.z_i
+                self.buoyancy_override_hint = None
 
-    def clear_error_integrals(self):
+    def clear_error_integrals(self, prev_buoyancy_input=None):
+        self.last_position_update_time = None
         self.error_integral = [0.0] * len(self.error_integral)
-        self.error_history = []
+        self.buoyancy_override_hint = prev_buoyancy_input
 
 
     def set_current_position(self, position):
         if self.last_position_update_time is not None:
             self.update_error_integrals(position)
+            self.buoyancy_override_hint = None
 
         self.last_position_update_time = rospy.Time.now()
         self.current_position = position
@@ -250,6 +260,7 @@ class PIDTracker(object):
         if self.z_override != 0.0:
             error[2] = self.z_override
 
+        # z_i is zero for buoyancy change controller.
         z_thrust = (error[2] * self.z_p) + (self.current_velocity[2] * self.z_d) + (self.error_integral[2] * self.z_i)
 
         if self.latest_imu_reading is not None:
