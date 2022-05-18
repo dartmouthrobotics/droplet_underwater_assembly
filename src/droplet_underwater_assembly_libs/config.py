@@ -8,6 +8,8 @@ GOAL_POSE_TOPIC = "/goal_pose"
 AR_MARKER_TOPIC = "/bluerov_controller/ar_tag_detector"
 BUILD_PHASE_TOPIC = "/droplet_underwater_assembly/build_phase"
 
+INPUT_LED_TOPIC = "/flash_detected"
+
 MIN_SERVO_PWM = 1000
 MAX_SERVO_PWM = 2100
 
@@ -79,7 +81,7 @@ MIN_DROP_SLOT = [-1.94, -0.115, -0.35, 0, 0, 0]
 
 TRACKED_MARKER_ID = 0
 TIGHT_POSE_TOLERANCE = [0.02, 0.02, 0.025, float("inf"), float("inf"), 0.02]
-COARSE_POSE_TOLERANCE = [0.06, 0.06, 0.06, float("inf"), float("inf"), 0.05]
+COARSE_POSE_TOLERANCE = [0.04, 0.04, 0.04, float("inf"), float("inf"), 0.05]
 ULTRA_COARSE_POSE_TOLERANCE = [0.10, 0.10, 0.10, float("inf"), float("inf"), 0.18]
 
 BINARY_P_POSE_TOLERANCE = [0.2, 0.2, 0.2, float("inf"), float("inf"), 0.10]
@@ -132,10 +134,10 @@ BALLAST_AIR_EMPTY_TIME_SECONDS = 30.0
 
 PRESSURE_TO_MH20 = 0.00010197
 
-GRIPPER_OPEN_TIME = 17.0
-GRIPPER_CLOSE_TIME = 17.0
+GRIPPER_OPEN_TIME = 19.0
+GRIPPER_CLOSE_TIME = 28.0
 GRIPPER_OPEN_PWM = 1000
-GRIPPER_CLOSE_PWM = 2000
+GRIPPER_CLOSE_PWM = 1600
 GRIPPER_STOP_PWM = 1500
 GRIPPER_SERVO_INDEX = 2
 

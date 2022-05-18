@@ -43,6 +43,7 @@ class AssemblyAction(object):
         self.start_time = None
         self.reached_goal_time = None
         self.high_level_build_step = None
+        self.forced_complete = False
 
         self.position_hold_time = position_hold_time
 
@@ -138,6 +139,9 @@ class AssemblyAction(object):
 
         if self.timeout is not None and (rospy.Time.now() - self.start_time).to_sec() > self.timeout:
             rospy.logerr("Action timed out!")
+            return True
+
+        if self.forced_complete:
             return True
 
         if self.action_type == 'move':

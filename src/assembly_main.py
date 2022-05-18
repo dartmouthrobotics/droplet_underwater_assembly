@@ -14,6 +14,7 @@ import geometry_msgs.msg
 import mavros_msgs.msg
 import stag_ros.msg
 import sensor_msgs.msg
+import std_msgs.msg
 
 from droplet_underwater_assembly_libs import utils
 from droplet_underwater_assembly_libs import gripper_handler
@@ -28,6 +29,8 @@ from droplet_underwater_assembly_libs import build_plan_parser
 import stag_ros.srv
 
 import droplet_underwater_assembly.msg
+
+INPUT_LED_ON = False
 
 LATEST_MARKER_MESSAGE = None
 RAW_VELOCITY_HISTORY = []
@@ -83,10 +86,10 @@ transform_broadcaster = None
 
 DEFAULT_Z_P = 1.0 
 pid_gains_dict = dict(
-    x_p=3.00,
-    y_p=3.00,
+    x_p=2.50,
+    y_p=2.50,
     yaw_p=2.00, 
-    x_d=-1.0, 
+    x_d=-0.7, 
     y_d=-0.25,
     yaw_d=1.0,
     x_i=config.DEFAULT_X_I_GAIN,
@@ -122,8 +125,6 @@ pid_gains_dict = dict(
 #    pitch_i=0.0,
 #    pitch_d=0.00,
 #) 
-
-# what is the simplest way to handle the problem of setting buoyancy
 
 CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
     **pid_gains_dict
@@ -211,6 +212,24 @@ LATEST_VELOCITY = None
 CLOSED_LOOP_TRACKER
 
 HAVE_ANY_MARKER_READING = False
+
+# hack used for led indicator thing for charlie's sunflower stuff
+SHOULD_CANCEL_HOLD = False
+number_on_frames = 0
+def light_flash_callback(flash_message):
+    global SHOULD_CANCEL_HOLD, number_on_frames
+
+    if flash_message.data:
+        number_on_frames = number_on_frames + 1
+    else:
+        if number_on_frames > 0:
+            rospy.loginfo("Flash has turned off!")
+        SHOULD_CANCEL_HOLD = False
+        number_on_frames = 0
+
+    if number_on_frames == 30:
+        rospy.loginfo("Found a flash on for long enough. Cancelling current action!!")
+        SHOULD_CANCEL_HOLD = True
 
 def imu_callback(imu_message):
     global latest_imu_message
@@ -361,7 +380,7 @@ def get_effort_for_buoyancy_change(current_action):
 
 
 def act_on_current_action(current_action, pose_error):
-    global ACTIVE_CONTROLLER, LAST_TRACKED_MARKER_TIME
+    global ACTIVE_CONTROLLER, LAST_TRACKED_MARKER_TIME, SHOULD_CANCEL_HOLD
 
     goal_not_reached = current_action.reached_goal_time is None
 
@@ -376,11 +395,11 @@ def act_on_current_action(current_action, pose_error):
             if reached_goal:
                 GRIPPER_HANDLER.start_opening_fingers()
                 current_action.start()
-                CLOSED_LOOP_TRACKER.z_i = 0.0
+                #CLOSED_LOOP_TRACKER.z_i = 0.0
                 CLOSED_LOOP_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
                 CLOSED_LOOP_TRACKER.x_i = config.DEFAULT_X_I_GAIN
-                CLOSED_LOOP_TRACKER.clear_error_integrals()
-                CLOSED_LOOP_TRACKER.z_p = 0.05
+                #CLOSED_LOOP_TRACKER.clear_error_integrals()
+                #CLOSED_LOOP_TRACKER.z_p = 0.05
                 started = True
 
         elif current_action.action_type == 'close_gripper':
@@ -388,17 +407,18 @@ def act_on_current_action(current_action, pose_error):
             if reached_goal:
                 GRIPPER_HANDLER.start_closing_fingers()
                 current_action.start()
-                CLOSED_LOOP_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
-                CLOSED_LOOP_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
-                CLOSED_LOOP_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
-                
-                CLOSED_LOOP_TRACKER.x_p = 0.1
-                CLOSED_LOOP_TRACKER.y_p = 0.1
-                CLOSED_LOOP_TRACKER.x_d = 0.1
-                CLOSED_LOOP_TRACKER.y_d = 0.1
-                CLOSED_LOOP_TRACKER.yaw_p = 0.1
-                CLOSED_LOOP_TRACKER.yaw_i = 0.1
-                CLOSED_LOOP_TRACKER.yaw_d = 0.1
+                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.04
+                #CLOSED_LOOP_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
+                #CLOSED_LOOP_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
+                #CLOSED_LOOP_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
+                #
+                #CLOSED_LOOP_TRACKER.x_p = 0.1
+                #CLOSED_LOOP_TRACKER.y_p = 0.1
+                #CLOSED_LOOP_TRACKER.x_d = 0.1
+                #CLOSED_LOOP_TRACKER.y_d = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_p = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_d = 0.1
                 started = True
 
             if DISPLAY is not None:
@@ -491,6 +511,9 @@ def act_on_current_action(current_action, pose_error):
         if current_action.is_started:
             rospy.loginfo("Starting action: {}".format(current_action))
     else:
+        if SHOULD_CANCEL_HOLD and current_action.action_type == 'hold':
+            current_action.forced_complete = True
+            SHOULD_CANCEL_HOLD = False
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
             rospy.loginfo("Completed action: {}. Error: {}. Tolerance {}".format(current_action, pose_error, current_action.pose_tolerance))
 
@@ -688,6 +711,13 @@ def main():
         config.IMU_TOPIC,
         sensor_msgs.msg.Imu,
         imu_callback,
+        queue_size=1
+    )
+
+    light_flasher_subscriber = rospy.Subscriber(
+        config.INPUT_LED_TOPIC,
+        std_msgs.msg.Bool,
+        light_flash_callback,
         queue_size=1
     )
 
