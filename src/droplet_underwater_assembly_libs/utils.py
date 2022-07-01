@@ -11,6 +11,7 @@ import matplotlib
 import tf
 import tf.transformations
 import geometry_msgs.msg
+import config
 
 
 ARMING_SERVICE_PROXY = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
@@ -110,30 +111,135 @@ def matrix_to_pose_stamped(pose_matrix, parent_frame):
     return pose_stamped
 
 
-def get_robot_pose_from_marker(marker):
-    marker_orientation_simplifier_matrix = tf.transformations.euler_matrix(-math.pi / 2.0, math.pi / 2.0, 0.0)
+def get_position_and_orientation_from_marker(marker):
+    position = [
+        marker.pose.pose.position.x,
+        marker.pose.pose.position.y,
+        marker.pose.pose.position.z,
+    ]
 
-    marker_pose_base_link = tf.transformations.concatenate_matrices(
-       tf.transformations.translation_matrix([
-           marker.pose.pose.position.x,
-           marker.pose.pose.position.y,
-           marker.pose.pose.position.z
-       ]),
-       tf.transformations.concatenate_matrices(
-           tf.transformations.quaternion_matrix([
-               marker.pose.pose.orientation.x,
-               marker.pose.pose.orientation.y,
-               marker.pose.pose.orientation.z,
-               marker.pose.pose.orientation.w,
-           ]),
-           marker_orientation_simplifier_matrix,
-       )
+    orientation = [
+        marker.pose.pose.orientation.x,
+        marker.pose.pose.orientation.y,
+        marker.pose.pose.orientation.z,
+        marker.pose.pose.orientation.w,
+    ]
+
+    return position, orientation
+
+
+def get_marker_pose_matrix(marker_message):
+    """
+    accepts a marker message and returns a homogenous transformation matrix
+    that describes that marker's pose in the message
+    """
+    marker_orientation_simplifier_matrix = tf.transformations.euler_matrix(
+        -math.pi / 2.0,
+        math.pi / 2.0, 
+        0.0
     )
 
-    current_pose_matrix = tf.transformations.inverse_matrix(marker_pose_base_link)
-    _, _, current_orientation, current_translation, _ = tf.transformations.decompose_matrix(current_pose_matrix)
+    position, orientation = get_position_and_orientation_from_marker(marker_message)
+    position_mat = tf.transformations.translation_matrix(
+        position
+    )
+
+    orientation_mat = tf.transformations.quaternion_matrix(
+        orientation
+    )
+
+    return tf.transformations.concatenate_matrices(
+        position_mat, tf.transformations.concatenate_matrices(
+            orientation_mat,
+            marker_orientation_simplifier_matrix
+        )
+    )
+
+
+def simplify_marker_pose(pose_matrix):
+    """
+    accepts a homogenous transformation matrix that describes a marker in base link frame
+    and rotates it so the inverse is a more intuitive coordinate frame.
+    """
+    return pose_matrix
+
+
+def get_grav_aligned_inverse(marker_pose_mat):
+    """
+    applies grav alignment to the inverse of the marker pose. Used to get the robot's pose
+    """
+    correction_mat = tf.transformations.quaternion_matrix(
+        config.GRAV_TO_WORLD_MARKER_QUATERNION
+    )
+
+    inverse_marker_pose = tf.transformations.inverse_matrix(marker_pose_mat)  
+
+    return tf.transformations.concatenate_matrices(
+        correction_mat,
+        inverse_marker_pose
+    )
+
+
+def get_grav_aligned_simplified_pose_matrix(marker):
+    simplified_grav_corrected_matrix = get_grav_aligned_inverse(
+        simplify_marker_pose(
+            get_marker_pose_matrix(
+                marker
+            )
+        )
+    )
+
+    return simplified_grav_corrected_matrix
+
+
+def get_robot_pose_from_marker(marker):
+    """
+    Given a marker reading for the world marker, returns the robot's pose
+    in the format used by the rest of the code. Applies simplification 
+    for coordinate system and gravity correction. Make sure to calibrate
+    the grav correction!
+    """
+    simplified_grav_corrected_matrix = get_grav_aligned_simplified_pose_matrix(marker)
+
+    _, _, current_orientation, current_translation, _ = tf.transformations.decompose_matrix(
+        simplified_grav_corrected_matrix
+    )
 
     return current_translation, current_orientation
+
+    #marker_orientation_simplifier_matrix = tf.transformations.euler_matrix(
+    #    -math.pi / 2.0,
+    #    math.pi / 2.0, 
+    #    0.0
+    #)
+
+    #marker_pose_base_link = tf.transformations.concatenate_matrices(
+    #   tf.transformations.translation_matrix([
+    #       marker.pose.pose.position.x,
+    #       marker.pose.pose.position.y,
+    #       marker.pose.pose.position.z
+    #   ]),
+    #   tf.transformations.concatenate_matrices(
+    #       tf.transformations.quaternion_matrix([
+    #           marker.pose.pose.orientation.x,
+    #           marker.pose.pose.orientation.y,
+    #           marker.pose.pose.orientation.z,
+    #           marker.pose.pose.orientation.w,
+    #       ]),
+    #       marker_orientation_simplifier_matrix,
+    #   )
+    #)
+
+    ## aligns roll and pitch with grav frame
+    #correction_quat = config.GRAV_TO_WORLD_MARKER_QUATERNION
+    #correction_mat = tf.transformations.quaternion_matrix(correction_quat)
+
+    #base_link_in_marker_frame = tf.transformations.inverse_matrix(marker_pose_base_link)
+
+    #current_pose_matrix = tf.transformations.concatenate_matrices(correction_mat, base_link_in_marker_frame)
+    #_, _, current_orientation, current_translation, _ = tf.transformations.decompose_matrix(current_pose_matrix)
+
+    #return current_translation, current_orientation
 
 
 def to_xyzrpy(translation, orientation):

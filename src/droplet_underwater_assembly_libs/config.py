@@ -1,6 +1,15 @@
 import collections
+import numpy
 
-#IMU_TOPIC = "/imu/data"
+# calibrate these with 'calibrate_scene_transforms_node.py'
+#GRAV_TO_WORLD_MARKER_QUATERNION = [-0.0013205714067287897, -0.019854095959762185, -5.397549722797079e-05, 0.99980201442656935]
+GRAV_TO_WORLD_MARKER_QUATERNION = [0.0, 0.0, 0.0, 1.0]
+
+PLATFORM_TO_WORLD_MATRIX = numpy.array(
+[[0.9997888494914744, -0.019295161544596231, -0.0070677559014136323, 1.5869672111684483], [0.018687054660282965, 0.99679094336632768, -0.077837068360712497, 0.049139857761515908], [0.0085469538806307518, 0.077688557483290732, 0.99694104019020491, 0.37680373403020362], [0.0, 0.0, 0.0, 1.0]]
+)
+# end calibrated
+
 IMU_TOPIC = "/mini_ahrs_ros/imu"
 RC_OVERRIDE_TOPIC = "/mavros/rc/override"
 DEPTH_TOPIC = "/mavros/imu/static_pressure"
@@ -34,44 +43,6 @@ RANDOMLY_DISPLACE_CENTER_BACK = True
 RANDOM_DISPLACEMENT_RANGE = [0.2, 0.2, 0.1, 0.2]
 
 BuildStep = collections.namedtuple('BuildStep', ['pickup_slot', 'drop_slot', 'pickup_wrist_pwm', 'drop_wrist_pwm'])
-
-# so what does the implementation look like? Another assembly action with its termination criterion. Another tracker subclass. Need to integrate it by switching the active controller.
-
-# staggered 8-block build
-#BUILD_PLAN = [
-#    BuildStep(pickup_slot=(2,0), drop_slot=(0,10)),
-#    BuildStep(pickup_slot=(2,4), drop_slot=(0,5)),
-#    BuildStep(pickup_slot=(1,0), drop_slot=(0,0)),
-#    BuildStep(pickup_slot=(1,4), drop_slot=(1,11)),
-#    BuildStep(pickup_slot=(1,8), drop_slot=(1,6)),
-#    BuildStep(pickup_slot=(0,0), drop_slot=(1,1)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(2,6)),
-#    BuildStep(pickup_slot=(0,8), drop_slot=(2,1)),
-#]
-
-# 6 block pyramid
-#BUILD_PLAN = [
-#    BuildStep(pickup_slot=(2,0), drop_slot=(0,10)),
-#    BuildStep(pickup_slot=(2,4), drop_slot=(0,5)),
-#    BuildStep(pickup_slot=(1,0), drop_slot=(0,0)),
-#    BuildStep(pickup_slot=(1,4), drop_slot=(1,7)),
-#    BuildStep(pickup_slot=(1,8), drop_slot=(1,2)),
-#    BuildStep(pickup_slot=(0,0), drop_slot=(2,4)),
-#]
-
-# 10 block repeatability 
-#BUILD_PLAN = [
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#    BuildStep(pickup_slot=(0,4), drop_slot=(0,4)),
-#]
 
 PICKUP_PLATFORM_DIMENSIONS = [4, 12]
 DROP_PLATFORM_DIMENSIONS = [4, 15]
@@ -134,10 +105,10 @@ BALLAST_AIR_EMPTY_TIME_SECONDS = 30.0
 
 PRESSURE_TO_MH20 = 0.00010197
 
-GRIPPER_OPEN_TIME = 19.0
-GRIPPER_CLOSE_TIME = 28.0
+GRIPPER_OPEN_TIME = 17.0
+GRIPPER_CLOSE_TIME = 20.0
 GRIPPER_OPEN_PWM = 1000
-GRIPPER_CLOSE_PWM = 1600
+GRIPPER_CLOSE_PWM = 1700
 GRIPPER_STOP_PWM = 1500
 GRIPPER_SERVO_INDEX = 2
 

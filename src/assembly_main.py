@@ -115,10 +115,10 @@ pid_gains_dict = dict(
 #    x_i=0.0,
 #    y_i=0.0,
 #    yaw_i=0.0,
-#    roll_p=0.0,
+#    roll_p=1.25,
 #    roll_i=0.0,
 #    roll_d=0.0,
-#    z_p=1.0,
+#    z_p=0.0,
 #    z_i=0.0,
 #    z_d=0.00,
 #    pitch_p=0.0,
@@ -163,7 +163,7 @@ binary_gains = dict(
 #    y_p=3.00,
 #    yaw_p=2.35, 
 #    x_d=-1.0, 
-#    y_d=-0.25,
+#    y_d=-0.25
 #    yaw_d=1.0,
 #    x_i=config.DEFAULT_X_I_GAIN,
 #    y_i=config.DEFAULT_Y_I_GAIN,
@@ -407,18 +407,18 @@ def act_on_current_action(current_action, pose_error):
             if reached_goal:
                 GRIPPER_HANDLER.start_closing_fingers()
                 current_action.start()
-                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.04
-                #CLOSED_LOOP_TRACKER.z_i = config.BLOCK_HELD_Z_I_GAIN
-                #CLOSED_LOOP_TRACKER.x_i = config.BLOCK_HELD_X_I_GAIN
-                #CLOSED_LOOP_TRACKER.y_i = config.BLOCK_HELD_Y_I_GAIN
+                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.23
+                CLOSED_LOOP_TRACKER.z_i = 0.0
+                CLOSED_LOOP_TRACKER.x_i = 0.0
+                CLOSED_LOOP_TRACKER.y_i = 0.0
                 #
-                #CLOSED_LOOP_TRACKER.x_p = 0.1
-                #CLOSED_LOOP_TRACKER.y_p = 0.1
-                #CLOSED_LOOP_TRACKER.x_d = 0.1
-                #CLOSED_LOOP_TRACKER.y_d = 0.1
-                #CLOSED_LOOP_TRACKER.yaw_p = 0.1
-                #CLOSED_LOOP_TRACKER.yaw_i = 0.1
-                #CLOSED_LOOP_TRACKER.yaw_d = 0.1
+                CLOSED_LOOP_TRACKER.x_p = 0.1
+                CLOSED_LOOP_TRACKER.y_p = 0.1
+                CLOSED_LOOP_TRACKER.x_d = 0.1
+                CLOSED_LOOP_TRACKER.y_d = 0.1
+                CLOSED_LOOP_TRACKER.yaw_p = 0.1
+                CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                CLOSED_LOOP_TRACKER.yaw_d = 0.1
                 started = True
 
             if DISPLAY is not None:
@@ -490,7 +490,7 @@ def act_on_current_action(current_action, pose_error):
             )
 
             if current_action.ballast_change_direction > 0:
-                GRIPPER_HANDLER.start_closing_fingers()
+                #GRIPPER_HANDLER.start_closing_fingers()
                 BALLAST_HANDLER.start_pulsing(
                     state=BALLAST_HANDLER.state_fill_with_air,
                     neutral_time=config.BALLAST_AIR_IN_PULSE_OFF_TIME,
@@ -533,6 +533,10 @@ def act_on_current_action(current_action, pose_error):
                 CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
 
             if current_action.action_type == 'close_gripper':
+                CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
+                CLOSED_LOOP_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
+                CLOSED_LOOP_TRACKER.x_i =   pid_gains_dict['x_i']
+                CLOSED_LOOP_TRACKER.y_i =   pid_gains_dict['y_i']
                 CLOSED_LOOP_TRACKER.x_p =   pid_gains_dict['x_p']
                 CLOSED_LOOP_TRACKER.y_p =   pid_gains_dict['y_p']
                 CLOSED_LOOP_TRACKER.x_d =   pid_gains_dict['x_d']
@@ -594,7 +598,7 @@ def run_build_plan(rc_override_publisher):
     if not DRY_RUN:
         utils.set_motor_arming(True)
         rospy.loginfo("Motors armed.")
-        GRIPPER_HANDLER.start_opening_fingers()
+        #GRIPPER_HANDLER.start_opening_fingers()
 
     start_time = datetime.datetime.now()
     number_actions = len(ACTIONS)
@@ -661,7 +665,9 @@ def run_build_plan(rc_override_publisher):
         BALLAST_HANDLER.update()
 
         utils.terminate_if_unsafe(go_message, 400, DRY_RUN)
-        rc_override_publisher.publish(go_message)
+
+        if not DRY_RUN:
+            rc_override_publisher.publish(go_message)
 
         loop_end = rospy.Time.now()
         loop_time = (loop_end - loop_start).to_sec()
@@ -783,6 +789,9 @@ def main():
     if not DRY_RUN:
         BALLAST_HANDLER.start_emptying_ballast_air()
         wait_for_marker_data()
+    else:
+        while LATEST_MARKER_MESSAGE is None:
+            pass
 
     rospy.loginfo("Got marker data, going!!")
 

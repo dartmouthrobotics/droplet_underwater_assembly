@@ -1,0 +1,24 @@
+for the calibration of the scene.... we have markers rigidly affixed to the platfors. We can alsways see the global marker but can only someties see the 
+
+we want to basically define tasks relative to the world marker. The tasks are  things like approach the block, grab it and carry it over to the other place
+
+Tasks can be defined in different coordinate systems -- ie a pickup and dropoff platform or just relative to the world marker.
+
+a few questions:
+    how does the script run?
+    What are its inputs?
+    what does it output and where?
+
+    how is that used to specify actions?
+
+for the single platform, we'd define the approach action in terms of the target's coordinate system
+-- ie like block 1 -> build platform -> world
+
+so we define things in terms of the block's coordinate system. We assume the transform from the platform's marker to the slots. Lets figure out the right way to do that stuff first I guess.....
+
+first question: how do we specify the transforms of the build platform?
+lets just do it in a python script. The python script will continually publish the tf tree
+
+no actually this is too much. We will have a calibration step that outputs the tform and we just plug that into a python script. What does that look like then?
+
+the script will take some high level spec like we used to do: like pickup at slot a0, carry to slot b0 etc etc, but all the actions will be described in the low level spec. This means that we fiddle with two things: the precise ordering of stuff and the tforms.

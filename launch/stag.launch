@@ -3,7 +3,7 @@
 <launch>
   <arg name="standalone" default="false" doc="if this is set to the string true, does not spawn a nodelet manager. Otherwise it does."/>
 
-  <!--<group if="$(arg acquisition)">
+  <group if="$(arg standalone)">
     <include file="$(find droplet_underwater_assembly)/description.launch" />
 
     <include file="$(find spinnaker_sdk_camera_driver)/launch/acquisition.launch">
@@ -13,7 +13,7 @@
       <arg name="color" value="false"/>
       <arg name="exposure_time" value="8100"/>
     </include>
-  </group>-->
+  </group>
 
   <group if="$(arg standalone)">
       <node pkg="nodelet" type="nodelet" name="bluerov_nodelet_manager" args="manager" output="screen" respawn="true">
@@ -36,7 +36,6 @@
     <rosparam command="load" file="$(find droplet_underwater_assembly)/param/bundle-four-stags-aluminum.json" />
 
     <rosparam command="load" param="marker_sizes_by_id" file="$(find droplet_underwater_assembly)/param/marker_sizes_by_id.yaml" />
-
     <param name="track_markers" type="bool" value="false" />
     <param name="marker_track_height_offset" type="int" value="100" />
     <param name="marker_track_width_offset" type="int" value="100" />

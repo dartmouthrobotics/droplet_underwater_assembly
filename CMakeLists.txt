@@ -161,6 +161,7 @@ include_directories(
 install(PROGRAMS
   src/assembly_main.py
   src/flash_detector_node.py
+  src/calibrate_scene_transforms_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

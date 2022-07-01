@@ -249,7 +249,7 @@ class PIDTracker(object):
             self.latest_imu_reading.orientation.w
         ]
 
-        _, roll, pitch = tf.transformations.euler_from_quaternion(imu_orientation, axes='szyx')
+        roll, pitch, _ = tf.transformations.euler_from_quaternion(imu_orientation, axes='sxyz')
 
         return utils.angle_error_rads(roll, 0.0), utils.angle_error_rads(pitch, 0.0)
 

@@ -26,14 +26,14 @@
       <arg name="exposure_time" value="8000"/>
     </include>
 
-    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/calibration_test_config_2 /camera_array/cam0/image_raw/compressed /camera_array/cam0/camera_info /rosout /bluerov_controller/ar_tag_detector /tf /tf_static /mavros/rc/override /mini_ahrs_ros/imu /goal_pose /droplet_underwater_assembly/build_phase /mavros/imu/static_pressure /mavros/battery"></node>
+    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/6-24-pos-averaging-test /camera_array/cam0/camera_info /camera_array/cam0/image_raw/compressed /rosout /bluerov_controller/ar_tag_detector /tf /tf_static /mavros/rc/override /mini_ahrs_ros/imu /goal_pose /droplet_underwater_assembly/build_phase /mavros/imu/static_pressure /mavros/battery"></node>
 
   </group>
 
   <node pkg="droplet_underwater_assembly" output="screen" respawn="false" type="assembly_main.py" name="assembly_main_node" required="true"> 
     <param name="dry_run" type="bool" value="$(arg dry_run)" unless="$(arg test)"/>
     <param name="dry_run" type="bool" value="true" if="$(arg test)"/>
-    <param name="build_plan_file" type="string" value="$(find droplet_underwater_assembly)/param/repeatability_single_cone_center.txt"/>
+    <param name="build_plan_file" type="string" value="$(find droplet_underwater_assembly)/param/test_compiled_build_plan.txt"/>
   </node>
 
   <!--<node pkg="droplet_underwater_assembly" output="screen" respawn="false" required="true" type="flash_detector_node.py" name="flash_detector"/>-->

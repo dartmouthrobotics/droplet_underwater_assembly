@@ -1,0 +1,292 @@
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.10 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.20 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.30 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.40 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.50 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.60 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.70 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.80 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 0.90 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE GRAB FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.75 -0.04 -0.43 0.0 0.0 0.0
+HOLD 10.0
+CLOSE_GRIPPER
+CHANGE_BUOYANCY 1.00 -0.15 1 ;!!!!!!!!!!!!!!!!
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 5.0
+MOVE 0 -2.0 -0.13 -0.20 0.0 0.0 0.0
+HOLD 35.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; SEQUENCE DROP FIRST POST
+;; over first post high
+MOVE 0 -1.75 -0.05 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;; over first post low
+MOVE 0 -1.78 -0.05 -0.28 0.0 0.0 0.0
+HOLD 10.0
+OPEN_GRIPPER
+CHANGE_BUOYANCY 0.00 -0.3 -1
+MOVE 0 -1.6 -0.13 -0.04 0.0 0.0 0.0
+HOLD 10.0
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
