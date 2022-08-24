@@ -179,6 +179,8 @@ class BuildPlanParser(object):
 
         holding_block = False
         last_pose = None
+        center_back = None
+        currently_selected_tolerance = config.COARSE_POSE_TOLERANCE
 
         with open(build_plan_file) as file_stream:
             file_lines = file_stream.readlines()
@@ -272,11 +274,26 @@ class BuildPlanParser(object):
                         ]
 
                         parsed_actions.append(
-                            assembly_action.AssemblyAction('move', target_location, config.COARSE_POSE_TOLERANCE, position_hold_time=0.0)
+                            assembly_action.AssemblyAction('move', target_location, currently_selected_tolerance, position_hold_time=0.0)
                         )
 
                         last_pose = parsed_actions[-1].goal_pose 
                         parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("SET_CENTER_BACK"):
+                        center_back = list(map(float, command.split(" ")[1:]))
+
+                    elif command.startswith("SET_TOLERANCE"):
+                        tolerance_level = command.split(" ")[1].strip().lower()
+
+                        if tolerance_level == 'tight':
+                            currently_selected_tolerance = config.TIGHT_POSE_TOLERANCE
+                        elif tolerance_level == 'coarse':
+                            currently_selected_tolerance = config.COARSE_POSE_TOLERANCE
+                        elif tolerance_level == 'ultra_coarse':
+                            currently_selected_tolerance = config.ULTRA_COARSE_POSE_TOLERANCE
+                        else:
+                            raise Exception("Invalid tolerance level given in SET_TOLERANCE command! {}".format(tolerance_level))
 
                     elif command.startswith("HOLD"):
                         hold_time = float(command.split(" ")[1].strip())
@@ -285,7 +302,7 @@ class BuildPlanParser(object):
                             assembly_action.AssemblyAction(
                                 'hold',
                                 last_pose,
-                                config.COARSE_POSE_TOLERANCE,
+                                currently_selected_tolerance,
                                 position_hold_time=hold_time
                             )
                         )
@@ -314,7 +331,7 @@ class BuildPlanParser(object):
                             assembly_action.AssemblyAction(
                                 'inflate_ballast',
                                 last_pose,
-                                config.COARSE_POSE_TOLERANCE,
+                                currently_selected_tolerance,
                                 position_hold_time=0.0
                             )
                         )
@@ -328,6 +345,8 @@ class BuildPlanParser(object):
                         direction = int(tokens[2])
 
                         new_pose = list(last_pose)
+                        if direction < 0:
+                            new_pose = list(center_back)
                         new_pose[2] = z
                         print("Creating new pose: {}".format(new_pose))
                         print("Direction", direction)
@@ -336,7 +355,7 @@ class BuildPlanParser(object):
                         new_action = assembly_action.AssemblyAction(
                             'change_buoyancy',
                             new_pose,
-                            config.COARSE_POSE_TOLERANCE,
+                            currently_selected_tolerance,
                             position_hold_time=0.0,
                             t_level_from_planner=t_level,
                             ballast_change_direction=direction 
@@ -355,17 +374,37 @@ class BuildPlanParser(object):
                             )
                         )
                         parsed_actions[-1].high_level_build_step = line
-
-                    elif command.startswith("OPEN_GRIPPER"):
+                    elif command.startswith("LEFT_RIGHT_MOVE"):
+                        tokens = command.split(" ")[1:]
                         parsed_actions.append(
-                            assembly_action.AssemblyAction(
-                                'open_gripper',
-                                last_pose,
-                                config.COARSE_POSE_TOLERANCE,
-                                position_hold_time=0.0
+                            assembly_action.AssemblyAction.construct_move_left_right(
+                                x=float(tokens[0]),
+                                y=float(tokens[1])
                             )
                         )
+                        parsed_actions[-1].high_level_build_step = line
+
+                    elif command.startswith("OPEN_GRIPPER"):
+                        action = assembly_action.AssemblyAction(
+                            'open_gripper',
+                            last_pose,
+                            currently_selected_tolerance,
+                            position_hold_time=0.0
+                        )
+
+                        if 'SHIFT_RIGHT' in command:
+                            action.shift_left = True
+                            action.shift_right = False
+                        elif 'SHIFT_LEFT' in command:
+                            action.shift_left = False
+                            action.shift_right = True
+                        else:
+                            action.shift_left = False
+                            action.shift_right = False
                         
+                        parsed_actions.append(
+                            action
+                        )
                         parsed_actions[-1].high_level_build_step = line
 
                     elif command.startswith("CLOSE_GRIPPER"):
@@ -373,7 +412,7 @@ class BuildPlanParser(object):
                             assembly_action.AssemblyAction(
                                 'close_gripper',
                                 last_pose,
-                                config.COARSE_POSE_TOLERANCE,
+                                currently_selected_tolerance,
                                 position_hold_time=0.0
                             )
                         )

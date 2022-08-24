@@ -179,7 +179,7 @@ def get_world_orientation_in_grav(marker_message, ahrs_message):
 
 
 def is_full_reading(marker_message):
-    return len(marker_message.corners) == 16
+    return len(marker_message.corners) >= 12
 
 
 def marker_callback(message):

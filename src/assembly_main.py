@@ -9,6 +9,7 @@ import rospy
 import rospkg
 from mavros_msgs.srv import CommandBool
 import tf
+import tf.transformations
 
 import geometry_msgs.msg
 import mavros_msgs.msg
@@ -46,10 +47,14 @@ OPEN_LOOP_CONTROL_SELECTOR = 'OPEN_LOOP'
 PID_CONTROL_SELECTOR = 'PID'
 GRASP_SELECTOR = 'GRASP'
 BUOYANCY_CHANGE_CONTROL_SELECTOR = 'BUOYANCY_CHANGE'
+LEFT_RIGHT_MOVE_CONTROL_SELECTOR = 'LEFT_RIGHT_MOVE'
 
 ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
 
-SET_TRACKED_BUNDLE_IDS_PROXY = rospy.ServiceProxy("/stag_ros/set_tracked_bundle_ids", stag_ros.srv.SetTrackedBundles)
+SET_TRACKED_BUNDLE_IDS_PROXY = rospy.ServiceProxy(
+    "/stag_ros/set_tracked_bundle_ids",
+    stag_ros.srv.SetTrackedBundles
+)
 
 BUILD_PHASE_PUBLISHER = None
 
@@ -81,6 +86,7 @@ PLATFORMS = [
 ]
 
 latest_imu_message = None
+latest_pressure_message = None
 goal_pose_publisher = None
 transform_broadcaster = None
 
@@ -96,15 +102,36 @@ pid_gains_dict = dict(
     y_i=config.DEFAULT_Y_I_GAIN,
     yaw_i=0.15,
     roll_p=1.0,
-    roll_i=0.0,
+    roll_i=0.1,
     roll_d=-0.50,
     z_p=DEFAULT_Z_P,
     z_i=config.DEFAULT_Z_I_GAIN,
     z_d=0.00,
     pitch_p=-1.0,
-    pitch_i=0.0,
+    pitch_i=-0.1,
     pitch_d=0.50,
-) 
+)
+
+left_right_move_gains_dict = dict(
+    x_p=2.50,
+    y_p=2.50,
+    yaw_p=2.00, 
+    x_d=-0.7, 
+    y_d=-0.25,
+    yaw_d=1.0,
+    x_i=0.0,
+    y_i=0.0,
+    yaw_i=0.25,
+    roll_p=1.0,
+    roll_i=0.0,
+    roll_d=-0.50,
+    z_p=DEFAULT_Z_P,
+    z_i=0.0,
+    z_d=0.00,
+    pitch_p=-1.0,
+    pitch_i=-0.0,
+    pitch_d=0.50,
+)
 #pid_gains_dict = dict( # single gain for debugging
 #    x_p=0.00,
 #    y_p=0.00,
@@ -127,6 +154,10 @@ pid_gains_dict = dict(
 #) 
 
 CLOSED_LOOP_TRACKER = trajectory_tracker.PIDTracker(
+    **pid_gains_dict
+)
+
+LEFT_RIGHT_MOVE_TRACKER = trajectory_tracker.PIDTracker(
     **pid_gains_dict
 )
 
@@ -188,15 +219,15 @@ buoyancy_change_gains = dict(
     x_i=0.0,
     y_i=0.0,
     yaw_i=0.00,
-    roll_p=0.0,
-    roll_i=0.0,
+    roll_p=2.0,
+    roll_i=0.05,
     roll_d=-0.00,
     z_p=0.77,
     z_i=0.0,
     z_d=0.00,
-    pitch_p=-0.0,
-    pitch_i=0.0,
-    pitch_d=0.00,
+    pitch_p=-2.0,
+    pitch_i=-0.05,
+    pitch_d=0.50,
 )
 
 BINARY_P_TRACKER = trajectory_tracker.PIDTracker(
@@ -208,9 +239,6 @@ BUOYANCY_CHANGE_TRACKER = trajectory_tracker.PIDTracker(
 )
 
 LATEST_VELOCITY = None
-
-CLOSED_LOOP_TRACKER
-
 HAVE_ANY_MARKER_READING = False
 
 # hack used for led indicator thing for charlie's sunflower stuff
@@ -230,6 +258,12 @@ def light_flash_callback(flash_message):
     if number_on_frames == 30:
         rospy.loginfo("Found a flash on for long enough. Cancelling current action!!")
         SHOULD_CANCEL_HOLD = True
+
+
+def pressure_callback(pressure_message):
+    global latest_pressure_message
+    latest_pressure_message = pressure_message
+
 
 def imu_callback(imu_message):
     global latest_imu_message
@@ -292,7 +326,6 @@ def update_closed_loop_controller(current_action):
         )
     )
 
-
     latest_vel_avg = get_latest_velocity_xyzrpy()
 
     if LATEST_VELOCITY is not None:
@@ -304,6 +337,46 @@ def update_closed_loop_controller(current_action):
     CLOSED_LOOP_TRACKER.set_latest_imu_reading(latest_imu_message)
     CLOSED_LOOP_TRACKER.set_current_position(robot_pose_xyzrpy)
     CLOSED_LOOP_TRACKER.set_current_velocity(latest_vel_avg)
+
+
+def update_left_right_move_controller(current_action):
+    global latest_imu_message, latest_pressure_message
+
+    LEFT_RIGHT_MOVE_TRACKER.set_goal_position(current_action.goal_pose)
+
+    imu_orientation = [
+        latest_imu_message.orientation.x,
+        latest_imu_message.orientation.y,
+        latest_imu_message.orientation.z,
+        latest_imu_message.orientation.w
+    ]
+
+    yaw, roll, pitch = tf.transformations.euler_from_quaternion(
+        imu_orientation,
+        axes='szyx'
+    )
+
+    robot_pose_xyzrpy = get_robot_pose_xyzrpy()
+
+    position = [
+        robot_pose_xyzrpy[0],
+        robot_pose_xyzrpy[1],
+        robot_pose_xyzrpy[2],
+        roll,
+        pitch,
+        robot_pose_xyzrpy[5]
+    ]
+
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+
+    if LATEST_VELOCITY is not None:
+        VELOCITY_HISTORY.append(LATEST_VELOCITY)
+    
+    latest_vel_avg = get_latest_velocity_xyzrpy()
+
+    LEFT_RIGHT_MOVE_TRACKER.set_current_position(position)
+    LEFT_RIGHT_MOVE_TRACKER.set_latest_imu_reading(latest_imu_message)
+    LEFT_RIGHT_MOVE_TRACKER.set_current_velocity(latest_vel_avg)
 
 
 def update_buoyancy_change_controller(current_action):
@@ -369,7 +442,7 @@ def get_effort_for_buoyancy_change(current_action):
     direction = current_action.ballast_change_direction
     tlevel = current_action.ballast_change_t_level
     min_effort_up = 0.05
-    min_effort_down = 0.10
+    min_effort_down = 0.18
 
     if (direction > 0):
         max_effort = ((1.0 + min_effort_up) - tlevel) * config.MAX_EFFORT_BUOYANCY_CHANGE 
@@ -393,21 +466,51 @@ def act_on_current_action(current_action, pose_error):
         if current_action.action_type == 'open_gripper':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
-                GRIPPER_HANDLER.start_opening_fingers()
-                current_action.start()
-                #CLOSED_LOOP_TRACKER.z_i = 0.0
                 CLOSED_LOOP_TRACKER.y_i = config.DEFAULT_Y_I_GAIN
                 CLOSED_LOOP_TRACKER.x_i = config.DEFAULT_X_I_GAIN
-                #CLOSED_LOOP_TRACKER.clear_error_integrals()
-                #CLOSED_LOOP_TRACKER.z_p = 0.05
+
+                if current_action.shift_left:
+                    current_action.goal_pose[1] = current_action.goal_pose[1] - config.DROP_SHIFT_AMOUNT
+                elif current_action.shift_right:
+                    current_action.goal_pose[1] = current_action.goal_pose[1] + config.DROP_SHIFT_AMOUNT
+
+                GRIPPER_HANDLER.start_opening_fingers()
+
+                current_action.start()
                 started = True
+
+        elif current_action.action_type == 'left_right_move':
+            robot_pose = get_robot_pose_xyzrpy()
+
+            current_action.left_right_start_depth = robot_pose[2]
+            current_action.left_right_start_yaw = robot_pose[5]
+
+            goal_z = current_action.left_right_start_depth
+            goal_yaw = current_action.left_right_start_yaw
+            goal_x = current_action.goal_x
+            goal_y = current_action.goal_y
+
+            goal_pose = [
+                goal_x,
+                goal_y,
+                goal_z,
+                0.0,
+                0.0,
+                goal_yaw
+            ]
+            current_action.goal_pose = goal_pose
+            rospy.loginfo("Starting left right move with goal pose {}".format(current_action.goal_pose))
+
+            ACTIVE_CONTROLLER = LEFT_RIGHT_MOVE_CONTROL_SELECTOR
+            LEFT_RIGHT_MOVE_TRACKER.clear_error_integrals()
+
+            current_action.start()
+            started = True
 
         elif current_action.action_type == 'close_gripper':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
-                GRIPPER_HANDLER.start_closing_fingers()
-                current_action.start()
-                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.23
+                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.40
                 CLOSED_LOOP_TRACKER.z_i = 0.0
                 CLOSED_LOOP_TRACKER.x_i = 0.0
                 CLOSED_LOOP_TRACKER.y_i = 0.0
@@ -418,8 +521,11 @@ def act_on_current_action(current_action, pose_error):
                 CLOSED_LOOP_TRACKER.y_d = 0.1
                 CLOSED_LOOP_TRACKER.yaw_p = 0.1
                 CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                CLOSED_LOOP_TRACKER.roll_i = 0.0
                 CLOSED_LOOP_TRACKER.yaw_d = 0.1
                 started = True
+                GRIPPER_HANDLER.start_closing_fingers()
+                current_action.start()
 
             if DISPLAY is not None:
                 DISPLAY.update_led_state([255,125,0],1)
@@ -482,6 +588,7 @@ def act_on_current_action(current_action, pose_error):
         elif current_action.action_type == 'change_buoyancy':
             ACTIVE_CONTROLLER = BUOYANCY_CHANGE_CONTROL_SELECTOR
             CLOSED_LOOP_TRACKER.clear_error_integrals()
+            BUOYANCY_CHANGE_TRACKER.clear_error_integrals()
 
             max_effort = get_effort_for_buoyancy_change(current_action)
 
@@ -531,6 +638,7 @@ def act_on_current_action(current_action, pose_error):
                 CLOSED_LOOP_TRACKER.yaw_p = pid_gains_dict['yaw_p']
                 CLOSED_LOOP_TRACKER.yaw_i = pid_gains_dict['yaw_i']
                 CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
+                CLOSED_LOOP_TRACKER.clear_error_integrals()
 
             if current_action.action_type == 'close_gripper':
                 CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
@@ -543,7 +651,9 @@ def act_on_current_action(current_action, pose_error):
                 CLOSED_LOOP_TRACKER.y_d =   pid_gains_dict['y_d']
                 CLOSED_LOOP_TRACKER.yaw_p = pid_gains_dict['yaw_p']
                 CLOSED_LOOP_TRACKER.yaw_i = pid_gains_dict['yaw_i']
+                CLOSED_LOOP_TRACKER.roll_i = pid_gains_dict['roll_i']
                 CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
+                CLOSED_LOOP_TRACKER.clear_error_integrals()
 
             if len(ACTIONS) > 0:
                 return True, ACTIONS.pop(0)
@@ -563,6 +673,8 @@ def update_active_controller(current_action):
         update_binary_P_controller(current_action)
     elif ACTIVE_CONTROLLER == BUOYANCY_CHANGE_CONTROL_SELECTOR:
         update_buoyancy_change_controller(current_action)
+    elif ACTIVE_CONTROLLER == LEFT_RIGHT_MOVE_CONTROL_SELECTOR:
+        update_left_right_move_controller(current_action)
     else:
         raise Exception("Unrecognized active control selector!")
 
@@ -627,6 +739,8 @@ def run_build_plan(rc_override_publisher):
             pose_error = BINARY_P_TRACKER.get_error()
         elif ACTIVE_CONTROLLER == BUOYANCY_CHANGE_CONTROL_SELECTOR:
             pose_error = BUOYANCY_CHANGE_TRACKER.get_error()
+        elif ACTIVE_CONTROLLER == LEFT_RIGHT_MOVE_CONTROL_SELECTOR:
+            pose_error = LEFT_RIGHT_MOVE_TRACKER.get_error()
         else:
             raise Exception("Unrecognized active control selector!")
         if DISPLAY is not None:
@@ -658,6 +772,8 @@ def run_build_plan(rc_override_publisher):
             go_message = BINARY_P_TRACKER.get_next_rc_override()
         elif ACTIVE_CONTROLLER == BUOYANCY_CHANGE_CONTROL_SELECTOR:
             go_message = BUOYANCY_CHANGE_TRACKER.get_next_rc_override()
+        elif ACTIVE_CONTROLLER == LEFT_RIGHT_MOVE_CONTROL_SELECTOR:
+            go_message = LEFT_RIGHT_MOVE_TRACKER.get_next_rc_override()
         else:
             raise Exception("Unrecognized active control selector!")
 

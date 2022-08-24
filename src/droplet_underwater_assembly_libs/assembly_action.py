@@ -36,8 +36,18 @@ class AssemblyAction(object):
 
         return cls('move_wrist', pose, [1.0] * 6, wrist_rotation_pwm=pwm)
 
+    @classmethod
+    def construct_move_left_right(cls, x, y):
+        return cls(
+            action_type='left_right_move', 
+            goal_pose=[0.0]*6,
+            pose_tolerance=config.ULTRA_COARSE_POSE_TOLERANCE,
+            goal_x=x,
+            goal_y=y
+        )
+
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=config.DEFAULT_POSITION_HOLD_TIME, **kwargs):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move', 'hold', 'inflate_ballast', 'deflate_ballast', 'change_buoyancy']
+        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move', 'hold', 'inflate_ballast', 'deflate_ballast', 'change_buoyancy', 'left_right_move']
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
@@ -57,6 +67,13 @@ class AssemblyAction(object):
         self.timeout = None
         self.ballast_change_t_level = None
         self.ballast_change_direction = None
+
+        if self.action_type == 'left_right_move':
+            try:
+                self.goal_x = kwargs['goal_x']
+                self.goal_y = kwargs['goal_y']
+            except:
+                raise Exception("Invalid kwargs supplied to the move_left_right_action!")
 
         if 't_level_from_planner' in kwargs:
             self.ballast_change_t_level = kwargs['t_level_from_planner']
@@ -107,6 +124,9 @@ class AssemblyAction(object):
 
         if self.action_type == "hold":
             return "Hold for {} seconds".format(self.position_hold_time)
+
+        if self.action_type == "left_right_move":
+            return "Left right move to [{}, {}]".format(self.goal_x, self.goal_y)
 
         if self.action_type == 'inflate_ballast':
             return "Inflate ballast tanks"
@@ -173,7 +193,7 @@ class AssemblyAction(object):
         if self.action_type == 'change_platforms':
             return kwargs['last_tracked_marker_time'] is not None and (rospy.Time.now() - kwargs['last_tracked_marker_time']).to_sec() < 0.5
 
-        if self.action_type == 'binary_P_move':
+        if self.action_type == 'binary_P_move' or self.action_type == 'left_right_move':
             reached_goal = all([abs(error) < tolerance for (error, tolerance) in zip(pose_error, self.pose_tolerance)])
             return reached_goal
 

@@ -185,6 +185,10 @@ class PIDTracker(object):
     def update_error_integrals(self, next_position):
         next_error = utils.get_error(next_position, self.goal_position)
         seconds_since_last_update = (rospy.Time.now() - self.last_position_update_time).to_sec()
+        roll_error, pitch_error = self.get_angle_error_from_imu_reading()
+
+        next_error[3] = roll_error
+        next_error[4] = pitch_error
 
         for dimension in range(6):
             self.error_integral[dimension] = (next_error[dimension] * seconds_since_last_update) + self.error_integral[dimension]
@@ -271,8 +275,8 @@ class PIDTracker(object):
 
             return [
                 z_thrust,
-                self.roll_p * roll_error + self.roll_d * roll_velocity,
-                self.pitch_p * pitch_error + self.pitch_d * pitch_velocity
+                self.roll_p * roll_error + self.roll_d * roll_velocity + self.roll_i * self.error_integral[3],
+                self.pitch_p * pitch_error + self.pitch_d * pitch_velocity + self.pitch_i * self.error_integral[4]
             ]
 
         return [
@@ -347,6 +351,13 @@ class OpenLoopTracker(PIDTracker):
         return utils.construct_rc_message(motor_speeds)
         # we want to maintain the roll, yaw correction since we get that every frame easily
         # lets try pulsing up and to the left
+
+class YawDepthHoldController(PIDTracker):
+    def __init__(self, **kwargs):
+        super()
+
+    def set_pressure(pressure_reading):
+        pass
 
 
 class BinaryPController(PIDTracker):
