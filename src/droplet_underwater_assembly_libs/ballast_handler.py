@@ -17,6 +17,8 @@ class BallastHandler(object):
         self.pulsing_state = None
         self.current_pulse_start = None
 
+        self.empty_time = None
+
 
     def start_filling_ballast_with_air(self):
         self.current_state = self.state_fill_with_air
@@ -31,8 +33,13 @@ class BallastHandler(object):
         )
 
 
-    def start_emptying_ballast_air(self):
+    def start_emptying_ballast_air(self, empty_time=None):
         self.current_state = self.state_empty_ballast_air
+
+        self.empty_time = config.BALLAST_AIR_EMPTY_TIME_SECONDS
+        if empty_time is not None:
+            self.empty_time = empty_time
+
         self.entered_state_time = rospy.Time.now()
         self.publish_servo_position(
             config.BALLAST_SCUBA_VALVE_CLOSED_PWM,
@@ -93,7 +100,6 @@ class BallastHandler(object):
                 elif self.pulsing_state == self.state_empty_ballast_air:
                     self.pulse_interval = self.air_out_pulse_time
                     self.start_emptying_ballast_air()
-
         else:
             if self.entered_state_time is not None:
                 seconds_in_state = (rospy.Time.now() - self.entered_state_time).to_sec()
@@ -103,7 +109,7 @@ class BallastHandler(object):
                         self.go_to_neutral()
 
                 elif self.current_state == self.state_empty_ballast_air:
-                    if seconds_in_state > config.BALLAST_AIR_EMPTY_TIME_SECONDS:
+                    if seconds_in_state > self.empty_time:
                         self.go_to_neutral()
 
                 elif self.current_state == self.state_neutral:

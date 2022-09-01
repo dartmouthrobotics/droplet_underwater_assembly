@@ -283,6 +283,35 @@ class BuildPlanParser(object):
                     elif command.startswith("SET_CENTER_BACK"):
                         center_back = list(map(float, command.split(" ")[1:]))
 
+                    elif command.startswith("BAILING_RELEASE"):
+                        thrust_down_amount = float(command.split(" ")[1])
+                        bail_time = float(command.split(" ")[2])
+                        pre_open_time = float(command.split(" ")[3])
+
+                        action = assembly_action.AssemblyAction(
+                            action_type='bailing_release',
+                            goal_pose=last_pose,
+                            pose_tolerance=config.ULTRA_COARSE_POSE_TOLERANCE,
+                            thrust_down_amount=thrust_down_amount,
+                            bail_time=bail_time,
+                            pre_open_time=pre_open_time,
+                        )
+
+                        parsed_actions.append(
+                            action
+                        )
+                        parsed_actions[-1].high_level_build_step = line
+
+                        if 'SHIFT_RIGHT' in command:
+                            action.shift_left = True
+                            action.shift_right = False
+                        elif 'SHIFT_LEFT' in command:
+                            action.shift_left = False
+                            action.shift_right = True
+                        else:
+                            action.shift_left = False
+                            action.shift_right = False
+
                     elif command.startswith("SET_TOLERANCE"):
                         tolerance_level = command.split(" ")[1].strip().lower()
 

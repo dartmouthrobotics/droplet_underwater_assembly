@@ -26,7 +26,7 @@
       <arg name="exposure_time" value="9000"/>
     </include>
 
-    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/8-10-system-trials /camera_array/cam0/camera_info /camera_array/cam0/image_raw/compressed /rosout /bluerov_controller/ar_tag_detector /tf /tf_static /mavros/rc/override /mini_ahrs_ros/imu /goal_pose /droplet_underwater_assembly/build_phase /mavros/imu/static_pressure /mavros/battery"></node>
+    <node pkg="rosbag" type="record" name="experiment_rosbag" args="-o /home/bluerov/8-31-system-trials /camera_array/cam0/camera_info /camera_array/cam0/image_raw/compressed /rosout /bluerov_controller/ar_tag_detector /tf /tf_static /mavros/rc/override /mini_ahrs_ros/imu /goal_pose /droplet_underwater_assembly/build_phase /mavros/imu/static_pressure /mavros/battery"></node>
 
   </group>
 

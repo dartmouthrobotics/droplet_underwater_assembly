@@ -12,6 +12,13 @@ class GripperHandler(object):
         self.motion_started_time = None
 
     def start_opening_fingers(self):
+        if self.is_opening or self.is_closing:
+            self.publish_servo_position(
+                config.GRIPPER_STOP_PWM,
+                config.FINGER_SERVO_INDEX
+            )
+            raise Exception("Cannot open a non-stopped gripper!")
+
         self.finger_servo_speed = config.GRIPPER_OPEN_PWM
         self.motion_started_time = rospy.Time.now()
         self.publish_servo_position(
@@ -20,6 +27,13 @@ class GripperHandler(object):
         )
 
     def start_closing_fingers(self):
+        if self.is_opening or self.is_closing:
+            self.publish_servo_position(
+                config.GRIPPER_STOP_PWM,
+                config.FINGER_SERVO_INDEX
+            )
+            raise Exception("Cannot close a non-stopped gripper!")
+
         self.finger_servo_speed = config.GRIPPER_CLOSE_PWM
         self.motion_started_time = rospy.Time.now()
         self.publish_servo_position(

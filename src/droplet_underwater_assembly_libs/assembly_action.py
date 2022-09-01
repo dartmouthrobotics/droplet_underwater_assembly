@@ -47,7 +47,21 @@ class AssemblyAction(object):
         )
 
     def __init__(self, action_type, goal_pose, pose_tolerance, position_hold_time=config.DEFAULT_POSITION_HOLD_TIME, **kwargs):
-        self.valid_types = ['move', 'open_gripper', 'close_gripper', 'move_wrist', 'change_platforms', 'binary_P_move', 'hold', 'inflate_ballast', 'deflate_ballast', 'change_buoyancy', 'left_right_move']
+        self.valid_types = [
+            'move',
+            'open_gripper',
+            'close_gripper',
+            'move_wrist',
+            'change_platforms',
+            'binary_P_move',
+            'hold',
+            'inflate_ballast',
+            'deflate_ballast',
+            'change_buoyancy',
+            'left_right_move',
+            'bailing_release'
+        ]
+
         self.action_type = action_type
         self.goal_pose = goal_pose
         self.start_time = None
@@ -74,6 +88,11 @@ class AssemblyAction(object):
                 self.goal_y = kwargs['goal_y']
             except:
                 raise Exception("Invalid kwargs supplied to the move_left_right_action!")
+
+        if self.action_type == 'bailing_release':
+            self.bail_time = kwargs['bail_time']
+            self.thrust_down_amount = kwargs['thrust_down_amount']
+            self.pre_open_time = kwargs['pre_open_time']
 
         if 't_level_from_planner' in kwargs:
             self.ballast_change_t_level = kwargs['t_level_from_planner']
@@ -133,6 +152,9 @@ class AssemblyAction(object):
 
         if self.action_type == 'deflate_ballast':
             return "Deflate ballast tanks"
+
+        if self.action_type == 'bailing_release':
+            return "Bailing release"
 
         if self.action_type == 'change_buoyancy':
             # can we do fully deflating or inflating
@@ -199,6 +221,9 @@ class AssemblyAction(object):
 
         if self.action_type == 'hold':
             return (rospy.Time.now() - self.start_time).to_sec() > self.position_hold_time
+
+        if self.action_type == 'bailing_release':
+            return (rospy.Time.now() - self.start_time).to_sec() > max(config.GRIPPER_OPEN_TIME + self.pre_open_time, self.bail_time)
 
         if self.action_type == 'move_wrist':
             if self.gripper_handler.desired_rotation_position is None:

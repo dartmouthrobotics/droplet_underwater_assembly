@@ -31,6 +31,13 @@ import stag_ros.srv
 
 import droplet_underwater_assembly.msg
 
+# should bailing release be a new type of action or just a couple of options on the release action
+# bailing release is
+#   1. turn thrusters on pushing down. 
+#   2. bailing out air for a fixed amount of time.
+#   3. not pushing any direction other than down. What are the options that are needed? how hard to push down (done by changing the previous setpoint). Can implement the not pushing thing by just zeroing out gains.
+# I think there are a lot of options that would get clunky elsehwere because we want the standard options when dropping a code
+
 INPUT_LED_ON = False
 
 LATEST_MARKER_MESSAGE = None
@@ -479,6 +486,48 @@ def act_on_current_action(current_action, pose_error):
                 current_action.start()
                 started = True
 
+        elif current_action.action_type == 'bailing_release':
+            ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
+
+            if reached_goal:
+                current_action.gains_reset = False
+                # push down by the amount in the command
+                # set the gains on all axes to nothing
+                current_action.goal_pose[2] = current_action.goal_pose[2] - current_action.thrust_down_amount
+
+                if current_action.thrust_down_amount == 0.0:
+                    CLOSE_LOOP_TRACKER.z_i = 0.0
+
+                CLOSED_LOOP_TRACKER.x_i = 0.0
+                CLOSED_LOOP_TRACKER.y_i = 0.0
+                #CLOSED_LOOP_TRACKER.x_p = 0.1
+                #CLOSED_LOOP_TRACKER.y_p = 0.1
+                #CLOSED_LOOP_TRACKER.x_d = 0.1
+                #CLOSED_LOOP_TRACKER.y_d = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_p = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                #CLOSED_LOOP_TRACKER.roll_i = 0.0
+                #CLOSED_LOOP_TRACKER.yaw_d = 0.1
+                CLOSED_LOOP_TRACKER.x_p = 0.0
+                CLOSED_LOOP_TRACKER.x_d = 0.0
+                CLOSED_LOOP_TRACKER.y_d = 0.0
+                CLOSED_LOOP_TRACKER.yaw_p = 0.0
+                CLOSED_LOOP_TRACKER.yaw_i = 0.0
+                CLOSED_LOOP_TRACKER.roll_i = 0.0
+                CLOSED_LOOP_TRACKER.yaw_d = 0.0
+
+                if current_action.shift_left:
+                    current_action.goal_pose[1] = current_action.goal_pose[1] - config.DROP_SHIFT_AMOUNT
+                elif current_action.shift_right:
+                    current_action.goal_pose[1] = current_action.goal_pose[1] + config.DROP_SHIFT_AMOUNT
+                else:
+                    CLOSED_LOOP_TRACKER.y_p = 0.0
+
+                BALLAST_HANDLER.start_emptying_ballast_air(empty_time=current_action.bail_time)
+
+                current_action.start()
+                started = True
+    
         elif current_action.action_type == 'left_right_move':
             robot_pose = get_robot_pose_xyzrpy()
 
@@ -515,14 +564,20 @@ def act_on_current_action(current_action, pose_error):
                 CLOSED_LOOP_TRACKER.x_i = 0.0
                 CLOSED_LOOP_TRACKER.y_i = 0.0
                 #
-                CLOSED_LOOP_TRACKER.x_p = 0.1
-                CLOSED_LOOP_TRACKER.y_p = 0.1
-                CLOSED_LOOP_TRACKER.x_d = 0.1
-                CLOSED_LOOP_TRACKER.y_d = 0.1
-                CLOSED_LOOP_TRACKER.yaw_p = 0.1
-                CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                #CLOSED_LOOP_TRACKER.x_p = 0.1
+                #CLOSED_LOOP_TRACKER.y_p = 0.1
+                #CLOSED_LOOP_TRACKER.x_d = 0.1
+                #CLOSED_LOOP_TRACKER.y_d = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_p = 0.1
+                #CLOSED_LOOP_TRACKER.yaw_i = 0.1
+                CLOSED_LOOP_TRACKER.x_p = 0.0
+                CLOSED_LOOP_TRACKER.y_p = 0.0
+                CLOSED_LOOP_TRACKER.x_d = 0.0
+                CLOSED_LOOP_TRACKER.y_d = 0.0
+                CLOSED_LOOP_TRACKER.yaw_p = 0.0
+                CLOSED_LOOP_TRACKER.yaw_i = 0.0
                 CLOSED_LOOP_TRACKER.roll_i = 0.0
-                CLOSED_LOOP_TRACKER.yaw_d = 0.1
+                CLOSED_LOOP_TRACKER.yaw_d = 0.0
                 started = True
                 GRIPPER_HANDLER.start_closing_fingers()
                 current_action.start()
@@ -621,6 +676,31 @@ def act_on_current_action(current_action, pose_error):
         if SHOULD_CANCEL_HOLD and current_action.action_type == 'hold':
             current_action.forced_complete = True
             SHOULD_CANCEL_HOLD = False
+
+        if not current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
+            if current_action.action_type == 'bailing_release':
+                if (rospy.Time.now() - current_action.start_time).to_sec() > current_action.pre_open_time:
+                    if not GRIPPER_HANDLER.is_opening:
+                        GRIPPER_HANDLER.start_opening_fingers()
+                    elif (rospy.Time.now() - GRIPPER_HANDLER.motion_started_time).to_sec() > 4.0 and not current_action.gains_reset:
+                        current_action.gains_reset = True
+                        CLOSED_LOOP_TRACKER.clear_error_integrals()
+                        CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
+                        CLOSED_LOOP_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
+                        CLOSED_LOOP_TRACKER.x_i =   pid_gains_dict['x_i']
+                        CLOSED_LOOP_TRACKER.y_i =   pid_gains_dict['y_i']
+                        CLOSED_LOOP_TRACKER.x_p =   pid_gains_dict['x_p']
+                        CLOSED_LOOP_TRACKER.y_p =   pid_gains_dict['y_p']
+                        CLOSED_LOOP_TRACKER.x_d =   pid_gains_dict['x_d']
+                        CLOSED_LOOP_TRACKER.y_d =   pid_gains_dict['y_d']
+                        CLOSED_LOOP_TRACKER.yaw_p = pid_gains_dict['yaw_p']
+                        CLOSED_LOOP_TRACKER.yaw_i = pid_gains_dict['yaw_i']
+                        CLOSED_LOOP_TRACKER.roll_i = pid_gains_dict['roll_i']
+                        CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
+                        current_action.goal_pose[2] = current_action.goal_pose[2] + current_action.thrust_down_amount + 0.1
+                        rospy.loginfo("Setting goal pose to {} for after block release".format(current_action.goal_pose))
+                        CLOSED_LOOP_TRACKER.clear_error_integrals()
+
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
             rospy.loginfo("Completed action: {}. Error: {}. Tolerance {}".format(current_action, pose_error, current_action.pose_tolerance))
 
@@ -628,6 +708,7 @@ def act_on_current_action(current_action, pose_error):
                 BALLAST_HANDLER.stop_pulsing()
                 max_eff = get_effort_for_buoyancy_change(current_action)
                 CLOSED_LOOP_TRACKER.clear_error_integrals(prev_buoyancy_input=max_eff)
+
             if current_action.action_type == 'open_gripper':
                 CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
                 CLOSED_LOOP_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
@@ -641,6 +722,21 @@ def act_on_current_action(current_action, pose_error):
                 CLOSED_LOOP_TRACKER.clear_error_integrals()
 
             if current_action.action_type == 'close_gripper':
+                CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
+                CLOSED_LOOP_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
+                CLOSED_LOOP_TRACKER.x_i =   pid_gains_dict['x_i']
+                CLOSED_LOOP_TRACKER.y_i =   pid_gains_dict['y_i']
+                CLOSED_LOOP_TRACKER.x_p =   pid_gains_dict['x_p']
+                CLOSED_LOOP_TRACKER.y_p =   pid_gains_dict['y_p']
+                CLOSED_LOOP_TRACKER.x_d =   pid_gains_dict['x_d']
+                CLOSED_LOOP_TRACKER.y_d =   pid_gains_dict['y_d']
+                CLOSED_LOOP_TRACKER.yaw_p = pid_gains_dict['yaw_p']
+                CLOSED_LOOP_TRACKER.yaw_i = pid_gains_dict['yaw_i']
+                CLOSED_LOOP_TRACKER.roll_i = pid_gains_dict['roll_i']
+                CLOSED_LOOP_TRACKER.yaw_d = pid_gains_dict['yaw_d']
+                CLOSED_LOOP_TRACKER.clear_error_integrals()
+
+            if current_action.action_type == 'bailing_release':
                 CLOSED_LOOP_TRACKER.z_p = DEFAULT_Z_P
                 CLOSED_LOOP_TRACKER.z_i = config.DEFAULT_Z_I_GAIN
                 CLOSED_LOOP_TRACKER.x_i =   pid_gains_dict['x_i']
