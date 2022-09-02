@@ -22,7 +22,7 @@ build_sequence_one_block = [
         is_cinder_block=True,
         is_half_block=False,
         to_slot=[4,1],
-        pickup_buoyancy=0.7,
+        pickup_buoyancy=0.8,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -33,7 +33,7 @@ build_sequence_one_block = [
         is_cinder_block=False,
         is_half_block=False,
         to_slot=[4,2],
-        pickup_buoyancy=0.2,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -44,7 +44,7 @@ build_sequence_one_block = [
         is_cinder_block=False,
         is_half_block=False,
         to_slot=[5,2],
-        pickup_buoyancy=0.2,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -55,7 +55,7 @@ build_sequence_one_block = [
         is_cinder_block=True,
         is_half_block=False,
         to_slot=[4,3],
-        pickup_buoyancy=0.7,
+        pickup_buoyancy=0.8,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -66,7 +66,7 @@ build_sequence_one_block = [
         is_cinder_block=False,
         is_half_block=False,
         to_slot=[4,3],
-        pickup_buoyancy=0.2,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -77,7 +77,7 @@ build_sequence_one_block = [
         is_cinder_block=False,
         is_half_block=False,
         to_slot=[5,3],
-        pickup_buoyancy=0.2,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -88,7 +88,7 @@ build_sequence_one_block = [
         is_cinder_block=True,
         is_half_block=False,
         to_slot=[4,4],
-        pickup_buoyancy=0.7,
+        pickup_buoyancy=0.8,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -340,12 +340,13 @@ build_sequence_one_block = [
 #]
 
 class Params:
+    is_test_run = True
     slot_stride_x = 0.205
     slot_stride_y = 0.3
-    block_height = 0.191
-    cone_height = 0.058
+    block_height = 0.215
+    cone_height = 0.085
     #cone_height = block_height
-    center_back = [-2.6, -0.05, 0.15, 0.0, 0.0, 0.0]
+    center_back = [-2.6, 0.05, 0.60, 0.0, 0.0, 0.0]
 
     # distance above slot to drop a block
     block_grasp_height = 0.01
@@ -366,7 +367,7 @@ class Params:
     shift_over_amount_pre_drop = 0.06
 
     # 68 inches to l bracket plus half block width
-    farthest_l_bracket_x_dist_meters = 1.7272 - 0.09
+    farthest_l_bracket_x_dist_meters = 1.7272 - 0.02
     block_half_depth = 0.144/2.0
     tslot_left_of_first_slot = 0.139
 
@@ -392,7 +393,7 @@ class Platform:
         )
         self.pitch_bump_matrix = transformations.euler_matrix(
             0.0,
-            0.04,
+            0.00,
             0.0,
             'sxyz'
         )
@@ -412,7 +413,7 @@ class Platform:
         self.first_slot_coords = first_slot_coords
         self.slot_matrix = self.get_slot_matrix_world_frame()
         self.recenter_position_local = numpy.array(
-            [-1.25, -0.40, 0.20, 1.0]
+            [-1.25, -0.35, 0.40, 1.0]
         )
         self.recenter_position_world = self.to_world_frame(self.recenter_position_local)
 
@@ -459,54 +460,56 @@ class Platform:
 def get_block_pickup_locations(platform):
     first_slot_coords = platform.first_slot_coords
     pickup_slot_stride_x = 12.0 * 0.0254
+    z_offset = -0.06
+    y_offset = 0.13
 
     return [
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 2*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 2*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + 1.0 * pickup_slot_stride_x,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 2*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 2*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + 2.0 * pickup_slot_stride_x,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 2*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 2*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + 3.0 * pickup_slot_stride_x,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 2*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 2*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 1.0*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 1.0*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + 1.0 * pickup_slot_stride_x,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 1.0*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 1.0*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + 2.0 * pickup_slot_stride_x,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 1.0*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 1.0*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
             first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + 3.0 * pickup_slot_stride_x,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + 0.02,
-            first_slot_coords[2] + 1.0*Params.block_height - 0.06,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + Params.slot_stride_x/2.0 + y_offset,
+            first_slot_coords[2] + 1.0*Params.block_height + z_offset,
             1.0
         ])),
     ]
@@ -535,7 +538,7 @@ def get_half_block_pickup_locations(platform):
 def get_cone_pickup_locations(platform):
     first_slot_coords = platform.first_slot_coords
     pickup_slot_stride_x = 12.0 * 0.0254
-    y_offset = 0.05
+    y_offset = 0.14
     z_offset = 0.06
     x_offset = -0.00
 
@@ -660,7 +663,7 @@ def compile_build_plan(sequence, platform, output_file):
 
         outfile_lines.append("; BUILD STEP {}".format(i))
         outfile_lines.append(";;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        outfile_lines.append("; SEQUENCE GRASP {}".format(0))
+        outfile_lines.append("; SEQUENCE GRASP {}".format(i))
         # center back
         # intermediate point
         # on approach right after center back
@@ -707,10 +710,10 @@ def compile_build_plan(sequence, platform, output_file):
         outfile_lines.append("HOLD {}".format(7.0))
 
         # over target high
-        if step.is_cinder_block:
-            outfile_lines.append("SET_TOLERANCE COARSE")
-        else:
-            outfile_lines.append("SET_TOLERANCE TIGHT")
+        #if step.is_cinder_block:
+        outfile_lines.append("SET_TOLERANCE COARSE")
+        #else:
+        #    outfile_lines.append("SET_TOLERANCE TIGHT")
 
         outfile_lines.append(
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
@@ -733,8 +736,20 @@ def compile_build_plan(sequence, platform, output_file):
                 )
             )
             outfile_lines.append("HOLD {}".format(Params.pre_grasp_hold_time))
+        else:
+            outfile_lines.append("SET_TOLERANCE TIGHT")
+            outfile_lines.append(
+                "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
+                    x=from_slot_world[0],
+                    y=from_slot_world[1],
+                    z=from_slot_high_z - 0.07,
+                    yaw=platform_yaw,
+                )
+            )
+            outfile_lines.append("HOLD {}".format(Params.pre_grasp_hold_time))
 
-        outfile_lines.append("CLOSE_GRIPPER")
+        if not Params.is_test_run:
+            outfile_lines.append("CLOSE_GRIPPER")
 
         outfile_lines.append("SET_TOLERANCE COARSE")
         outfile_lines.append("CHANGE_BUOYANCY {} {} 1".format(
@@ -743,21 +758,39 @@ def compile_build_plan(sequence, platform, output_file):
         ))
 
         outfile_lines.append("SET_TOLERANCE ULTRA_COARSE")
-        if not step.is_cinder_block and not step.is_half_block:
-            outfile_lines.append(
-                "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
-                    x=from_slot_world[0],
-                    y=from_slot_world[1],
-                    z=from_slot_high_z,
-                    yaw=platform_yaw,
-                )
+        #if not step.is_cinder_block and not step.is_half_block:
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
+                x=from_slot_world[0],
+                y=from_slot_world[1],
+                z=from_slot_high_z,
+                yaw=platform_yaw,
             )
-            outfile_lines.append("HOLD {}".format(4.0))
+        )
+        outfile_lines.append("HOLD {}".format(10.0))
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
+                x=from_slot_world[0],
+                y=from_slot_world[1],
+                z=Params.center_back[2],
+                yaw=platform_yaw,
+            )
+        )
+        outfile_lines.append("HOLD {}".format(10.0))
 
-        outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
-            x=from_slot_world[0],
-            y=Params.center_back[1],
-        ))
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
+                x=from_slot_world[0],
+                y=Params.center_back[1],
+                z=Params.center_back[2],
+                yaw=platform_yaw,
+            )
+        )
+
+        #outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
+        #    x=from_slot_world[0],
+        #    y=Params.center_back[1],
+        #))
 
         outfile_lines.append(
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; center_back".format(
@@ -783,6 +816,27 @@ def compile_build_plan(sequence, platform, output_file):
         elif step.shift_drop_left:
             drop_offset = -Params.shift_over_amount_pre_drop
             additional_comment = "to left shifted position"
+
+        outfile_lines.append("HOLD {}".format(7.0))
+        outfile_lines.append("SET_TOLERANCE ULTRA_COARSE")
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; intermediate to approach drop".format(
+                x=Params.center_back[0] + 0.5 * (to_slot_world[0] - Params.center_back[0]),
+                y=to_slot_world[1] + drop_offset,
+                z=to_slot_high_z,
+                yaw=platform_yaw,
+            )
+        )
+        outfile_lines.append("HOLD {}".format(4.0))
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; intermediate to approach drop".format(
+                x=Params.center_back[0] + 0.7 * (to_slot_world[0] - Params.center_back[0]),
+                y=to_slot_world[1] + drop_offset,
+                z=to_slot_high_z,
+                yaw=platform_yaw,
+            )
+        )
+        outfile_lines.append("HOLD {}".format(4.0))
 
         outfile_lines.append("SET_TOLERANCE COARSE")
         outfile_lines.append(
@@ -816,14 +870,25 @@ def compile_build_plan(sequence, platform, output_file):
                 Params.pre_open_time
             )
 
-        if step.shift_drop_left:
-            outfile_lines.append("{} SHIFT_LEFT".format(preamble))
-        elif step.shift_drop_right:
-            outfile_lines.append("{} SHIFT_RIGHT".format(preamble))
-        else:
-            outfile_lines.append("{}".format(preamble))
+        if not Params.is_test_run:
+            if step.shift_drop_left:
+                outfile_lines.append("{} SHIFT_LEFT".format(preamble))
+            elif step.shift_drop_right:
+                outfile_lines.append("{} SHIFT_RIGHT".format(preamble))
+            else:
+                outfile_lines.append("{}".format(preamble))
 
         outfile_lines.append("SET_TOLERANCE COARSE")
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; {cmt}".format(
+                x=to_slot_world[0],
+                y=to_slot_world[1],
+                z=to_slot_high_z + 0.05,
+                yaw=platform_yaw,
+                cmt=""
+            )
+        )
+        outfile_lines.append("HOLD {}".format(8.0))
 
         outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
             x=after_place_surface_clear_xy[0],

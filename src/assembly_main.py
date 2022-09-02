@@ -559,7 +559,7 @@ def act_on_current_action(current_action, pose_error):
         elif current_action.action_type == 'close_gripper':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
-                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.40
+                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.30
                 CLOSED_LOOP_TRACKER.z_i = 0.0
                 CLOSED_LOOP_TRACKER.x_i = 0.0
                 CLOSED_LOOP_TRACKER.y_i = 0.0
