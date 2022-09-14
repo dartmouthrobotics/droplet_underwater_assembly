@@ -21,6 +21,7 @@ class BallastHandler(object):
 
 
     def start_filling_ballast_with_air(self):
+        rospy.loginfo("BALLAST Air in valve configuration")
         self.current_state = self.state_fill_with_air
         self.entered_state_time = rospy.Time.now()
         self.publish_servo_position(
@@ -35,6 +36,7 @@ class BallastHandler(object):
 
     def start_emptying_ballast_air(self, empty_time=None):
         self.current_state = self.state_empty_ballast_air
+        rospy.loginfo("BALLAST Air out valve configuration")
 
         self.empty_time = config.BALLAST_AIR_EMPTY_TIME_SECONDS
         if empty_time is not None:

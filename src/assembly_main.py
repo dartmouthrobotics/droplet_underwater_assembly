@@ -559,7 +559,7 @@ def act_on_current_action(current_action, pose_error):
         elif current_action.action_type == 'close_gripper':
             ACTIVE_CONTROLLER = PID_CONTROL_SELECTOR
             if reached_goal:
-                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.30
+                current_action.goal_pose[2] = current_action.goal_pose[2] - 0.40
                 CLOSED_LOOP_TRACKER.z_i = 0.0
                 CLOSED_LOOP_TRACKER.x_i = 0.0
                 CLOSED_LOOP_TRACKER.y_i = 0.0
@@ -700,6 +700,11 @@ def act_on_current_action(current_action, pose_error):
                         current_action.goal_pose[2] = current_action.goal_pose[2] + current_action.thrust_down_amount + 0.1
                         rospy.loginfo("Setting goal pose to {} for after block release".format(current_action.goal_pose))
                         CLOSED_LOOP_TRACKER.clear_error_integrals()
+            elif current_action.action_type == 'open_gripper':
+                if GRIPPER_HANDLER.is_opening:
+                    if (rospy.Time().now() - GRIPPER_HANDLER.motion_started_time).to_sec() > 5.3:
+                        BALLAST_HANDLER.start_emptying_ballast_air(empty_time=5.0)
+
 
         if current_action.is_complete(pose_error, last_tracked_marker_time=LAST_TRACKED_MARKER_TIME):
             rospy.loginfo("Completed action: {}. Error: {}. Tolerance {}".format(current_action, pose_error, current_action.pose_tolerance))

@@ -15,14 +15,39 @@ CLAW_TWIST_OFFSET = -0.000  # rads to accout for twist of the claw on frame
 
 BuildStep = collections.namedtuple("BuildStep", ["from_platform", "to_platform", "to_slot", "pickup_buoyancy", "after_drop_buoyancy", "is_cinder_block", "is_half_block", "shift_drop_left", "shift_drop_right"])
 
-build_sequence_one_block = [
+build_sequence_two_half_blocks = [
+    BuildStep(
+        from_platform=4,
+        to_platform=4,
+        is_cinder_block=False,
+        is_half_block=True,
+        to_slot=[4,1],
+        pickup_buoyancy=0.6,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        to_platform=4,
+        is_cinder_block=False,
+        is_half_block=True,
+        to_slot=[5,1],
+        pickup_buoyancy=0.6,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=True,
+    ),
+]
+
+build_sequence_three_block_column = [
     BuildStep(
         from_platform=4,
         to_platform=4,
         is_cinder_block=True,
         is_half_block=False,
         to_slot=[4,1],
-        pickup_buoyancy=0.8,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -55,7 +80,7 @@ build_sequence_one_block = [
         is_cinder_block=True,
         is_half_block=False,
         to_slot=[4,3],
-        pickup_buoyancy=0.8,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
@@ -88,66 +113,11 @@ build_sequence_one_block = [
         is_cinder_block=True,
         is_half_block=False,
         to_slot=[4,4],
-        pickup_buoyancy=0.8,
+        pickup_buoyancy=0.6,
         after_drop_buoyancy=0.0,
         shift_drop_left=False,
         shift_drop_right=False,
     ),
-    #BuildStep(
-    #    from_platform=4,
-    #    to_platform=4,
-    #    is_cinder_block=False,
-    #    is_half_block=False,
-    #    to_slot=[7,2],
-    #    pickup_buoyancy=0.8,
-    #    after_drop_buoyancy=0.0,
-    #    shift_drop_left=False,
-    #    shift_drop_right=False,
-    #),
-    #BuildStep(
-    #    from_platform=4,
-    #    to_platform=4,
-    #    is_cinder_block=False,
-    #    is_half_block=False,
-    #    to_slot=[6,2],
-    #    pickup_buoyancy=0.8,
-    #    after_drop_buoyancy=0.0,
-    #    shift_drop_left=False,
-    #    shift_drop_right=False,
-    #),
-    #BuildStep(
-    #    from_platform=4,
-    #    to_platform=4,
-    #    is_cinder_block=False,
-    #    is_half_block=False,
-    #    to_slot=[5,2],
-    #    pickup_buoyancy=0.8,
-    #    after_drop_buoyancy=0.0,
-    #    shift_drop_left=False,
-    #    shift_drop_right=False,
-    #),
-    #BuildStep(
-    #    from_platform=4,
-    #    to_platform=4,
-    #    is_cinder_block=False,
-    #    is_half_block=False,
-    #    to_slot=[4,2],
-    #    pickup_buoyancy=0.8,
-    #    after_drop_buoyancy=0.0,
-    #    shift_drop_left=False,
-    #    shift_drop_right=False,
-    #),
-    #BuildStep(
-    #    from_platform=4,
-    #    to_platform=4,
-    #    is_cinder_block=True,
-    #    is_half_block=False,
-    #    to_slot=[5,3],
-    #    pickup_buoyancy=0.8,
-    #    after_drop_buoyancy=0.0,
-    #    shift_drop_left=False,
-    #    shift_drop_right=False,
-    #),
 ]
 
 #build_sequence_baby = [ # one block on top of the other
@@ -246,105 +216,494 @@ build_sequence_one_block = [
 #    ),
 #]
 #
-#build_sequence_five_block_pyramid = [
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=True,
-#        to_platform=4,
-#        to_slot=[6,1],
-#        pickup_buoyancy=0.8,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=False,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=True,
-#        to_platform=4,
-#        to_slot=[4,1],
-#        pickup_buoyancy=0.8,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=True,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=True,
-#        to_platform=4,
-#        to_slot=[2,1],
-#        pickup_buoyancy=0.8,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=True,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=False,
-#        to_platform=4,
-#        to_slot=[6,2],
-#        pickup_buoyancy=0.7,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=False,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=False,
-#        to_platform=4,
-#        to_slot=[5,2],
-#        pickup_buoyancy=0.7,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=False,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=False,
-#        to_platform=4,
-#        to_slot=[4,2],
-#        pickup_buoyancy=0.7,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=False,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=False,
-#        to_platform=4,
-#        to_slot=[3,2],
-#        pickup_buoyancy=0.7,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=False,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=True,
-#        to_platform=4,
-#        to_slot=[5,3],
-#        pickup_buoyancy=0.8,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=False,
-#        shift_drop_right=False,
-#    ),
-#    BuildStep(
-#        from_platform=4,
-#        is_cinder_block=True,
-#        to_platform=4,
-#        to_slot=[3,3],
-#        pickup_buoyancy=0.8,
-#        after_drop_buoyancy=0.0,
-#        shift_drop_left=True,
-#        shift_drop_right=False,
-#    ),
-#]
+build_sequence_five_block_pyramid = [
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[2,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+]
+
+build_sequence_wall_segment = [
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[2,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ), # first layer of cinder blocks
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[7,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[2,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ), # second row cones
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ), # third row full blocks
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=True,
+        to_platform=4,
+        to_slot=[7,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=True,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=True,
+        to_platform=4,
+        to_slot=[2,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ), # third row half blocks
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[7,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[2,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ), # fourth row cones
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,4],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ), # last row blocks
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,4],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[2,4],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+]
+
+build_sequence_six_block_pyramid = [
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[2,1],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[6,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,2],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=True,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[3,3],
+        pickup_buoyancy=0.8,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=True,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[4,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    BuildStep(
+        from_platform=4,
+        is_cinder_block=False,
+        is_half_block=False,
+        to_platform=4,
+        to_slot=[5,3],
+        pickup_buoyancy=0.7,
+        after_drop_buoyancy=0.0,
+        shift_drop_left=False,
+        shift_drop_right=False,
+    ),
+    #BuildStep(
+    #    from_platform=4,
+    #    is_cinder_block=True,
+    #    is_half_block=False,
+    #    to_platform=4,
+    #    to_slot=[4,4],
+    #    pickup_buoyancy=0.8,
+    #    after_drop_buoyancy=0.0,
+    #    shift_drop_left=False,
+    #    shift_drop_right=False,
+    #),
+]
 
 class Params:
-    is_test_run = True
+    is_test_run = False
     slot_stride_x = 0.205
     slot_stride_y = 0.3
-    block_height = 0.215
-    cone_height = 0.085
+    block_height = 0.230
+    cone_height = 0.100
     #cone_height = block_height
     center_back = [-2.6, 0.05, 0.60, 0.0, 0.0, 0.0]
 
@@ -367,7 +726,7 @@ class Params:
     shift_over_amount_pre_drop = 0.06
 
     # 68 inches to l bracket plus half block width
-    farthest_l_bracket_x_dist_meters = 1.7272 - 0.02
+    farthest_l_bracket_x_dist_meters = 1.7272 + 0.02
     block_half_depth = 0.144/2.0
     tslot_left_of_first_slot = 0.139
 
@@ -461,7 +820,7 @@ def get_block_pickup_locations(platform):
     first_slot_coords = platform.first_slot_coords
     pickup_slot_stride_x = 12.0 * 0.0254
     z_offset = -0.06
-    y_offset = 0.13
+    y_offset = 0.08
 
     return [
         platform.to_world_frame(numpy.array([
@@ -519,17 +878,21 @@ def get_half_block_pickup_locations(platform):
     first_slot_coords = platform.first_slot_coords
     pickup_slot_stride_x = 12.0 * 0.0254
 
+    x_offset = 0.01
+    y_offset = -0.13
+    z_offset = -0.06
+
     return [
         platform.to_world_frame(numpy.array([
-            first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + 3.0 * Params.slot_stride_x + 0.02,
-            first_slot_coords[2] + 2*Params.block_height - 0.06,
+            first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + 4.0 * Params.slot_stride_x + y_offset,
+            first_slot_coords[2] + 1*Params.block_height + z_offset,
             1.0
         ])),
         platform.to_world_frame(numpy.array([
-            first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth,
-            first_slot_coords[1] - Params.tslot_left_of_first_slot + 4.0 * Params.slot_stride_x + 0.02,
-            first_slot_coords[2] + 2*Params.block_height - 0.06,
+            first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset,
+            first_slot_coords[1] - Params.tslot_left_of_first_slot + 3.0 * Params.slot_stride_x + y_offset,
+            first_slot_coords[2] + 1*Params.block_height + z_offset,
             1.0
         ])),
     ]
@@ -540,7 +903,7 @@ def get_cone_pickup_locations(platform):
     pickup_slot_stride_x = 12.0 * 0.0254
     y_offset = 0.14
     z_offset = 0.06
-    x_offset = -0.00
+    x_offset = 0.03
 
     return [
         platform.to_world_frame(
@@ -570,6 +933,73 @@ def get_cone_pickup_locations(platform):
         platform.to_world_frame(
             numpy.array([
                 first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset,
+                platform.first_slot_coords[1] + (4.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+
+        # SECOND ROW
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 1.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (7.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 1.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (6.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 1.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (5.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 1.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (4.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        # THIRD ROW
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 2.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (7.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 2.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (6.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 2.0 * pickup_slot_stride_x,
+                platform.first_slot_coords[1] + (5.0*Params.slot_stride_x) + y_offset,
+                first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
+                1.0
+            ])
+        ),
+        platform.to_world_frame(
+            numpy.array([
+                first_slot_coords[0] - Params.farthest_l_bracket_x_dist_meters - Params.block_half_depth + x_offset + 2.0 * pickup_slot_stride_x,
                 platform.first_slot_coords[1] + (4.0*Params.slot_stride_x) + y_offset,
                 first_slot_coords[2] + 1.0*Params.block_height + 1.0 * Params.cone_height - z_offset,
                 1.0
@@ -651,12 +1081,12 @@ def compile_build_plan(sequence, platform, output_file):
 
         to_slot_world = platform.slot_matrix[step.to_slot[1]][step.to_slot[0]] - offset
 
-        to_slot_high_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height + 0.06
+        to_slot_high_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height + 0.08
         to_slot_pre_drop_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height
 
         if step.is_cinder_block:
-            to_slot_high_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height + 0.01
-            to_slot_pre_drop_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height - 0.03
+            to_slot_high_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height + 0.08
+            to_slot_pre_drop_z = to_slot_world[2] + Params.base_link_to_gripper_height_closed + Params.block_drop_height
 
         from_slot_high_z = from_slot_world[2] + Params.base_link_to_gripper_height_open + Params.block_grasp_height + 0.14
         from_slot_pre_grasp_z = from_slot_world[2] + Params.base_link_to_gripper_height_open + Params.block_grasp_height
@@ -742,7 +1172,7 @@ def compile_build_plan(sequence, platform, output_file):
                 "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
                     x=from_slot_world[0],
                     y=from_slot_world[1],
-                    z=from_slot_high_z - 0.07,
+                    z=from_slot_high_z - 0.13,
                     yaw=platform_yaw,
                 )
             )
@@ -763,7 +1193,7 @@ def compile_build_plan(sequence, platform, output_file):
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
                 x=from_slot_world[0],
                 y=from_slot_world[1],
-                z=from_slot_high_z,
+                z=from_slot_high_z + 0.25,
                 yaw=platform_yaw,
             )
         )
@@ -772,7 +1202,7 @@ def compile_build_plan(sequence, platform, output_file):
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
                 x=from_slot_world[0],
                 y=from_slot_world[1],
-                z=Params.center_back[2],
+                z=from_slot_high_z + 0.25,
                 yaw=platform_yaw,
             )
         )
@@ -782,7 +1212,7 @@ def compile_build_plan(sequence, platform, output_file):
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw}".format(
                 x=from_slot_world[0],
                 y=Params.center_back[1],
-                z=Params.center_back[2],
+                z=max(Params.center_back[2], from_slot_high_z + 0.25),
                 yaw=platform_yaw,
             )
         )
@@ -863,7 +1293,7 @@ def compile_build_plan(sequence, platform, output_file):
         outfile_lines.append("HOLD {}".format(Params.pre_grasp_hold_time))
 
         preamble = "OPEN_GRIPPER"
-        if step.is_cinder_block:
+        if step.is_cinder_block or step.is_half_block:
             preamble = "BAILING_RELEASE {} {} {}".format(
                 Params.release_down_thrust_amount,
                 Params.release_bail_time,
@@ -883,28 +1313,36 @@ def compile_build_plan(sequence, platform, output_file):
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; {cmt}".format(
                 x=to_slot_world[0],
                 y=to_slot_world[1],
-                z=to_slot_high_z + 0.05,
+                z=to_slot_high_z + 0.00,
                 yaw=platform_yaw,
                 cmt=""
             )
         )
         outfile_lines.append("HOLD {}".format(8.0))
 
-        outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
-            x=after_place_surface_clear_xy[0],
-            y=after_place_surface_clear_xy[1],
-        ))
-        outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
-            x=after_place_surface_clear_xy[0] - 0.35,
-            y=after_place_surface_clear_xy[1],
-        ))
-
-        outfile_lines.append("CHANGE_BUOYANCY {} {} -1".format(
-            step.after_drop_buoyancy,
-            to_slot_pre_drop_z - 0.05 
-        ))
+        #outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
+        #    x=after_place_surface_clear_xy[0],
+        #    y=after_place_surface_clear_xy[1],
+        #))
+        #outfile_lines.append("LEFT_RIGHT_MOVE {x} {y}".format(
+        #    x=after_place_surface_clear_xy[0] - 0.35,
+        #    y=after_place_surface_clear_xy[1],
+        #))
+        #outfile_lines.append("CHANGE_BUOYANCY {} {} -1".format(
+        #    step.after_drop_buoyancy,
+        #    to_slot_pre_drop_z - 0.05 
+        #))
 
         outfile_lines.append("SET_TOLERANCE ULTRA_COARSE")
+        outfile_lines.append(
+            "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; {cmt}".format(
+                x=Params.center_back[0],
+                y=Params.center_back[1],
+                z=to_slot_high_z,
+                yaw=platform_yaw,
+                cmt=""
+            )
+        )
         outfile_lines.append(
             "MOVE 0 {x} {y} {z} 0.0 0.0 {yaw} ; center_back".format(
                 x=Params.center_back[0],
@@ -928,7 +1366,7 @@ if __name__ == '__main__':
         to_world_tform=config.PLATFORM_TO_WORLD_MATRIX,
         manual_yaw_bump_rads=-0.01,
         #first_slot_coords=[1.654, -0.508, 0.184],
-        first_slot_coords=[-0.400, -0.970, -0.508],
+        first_slot_coords=[-0.380, -0.970, -0.508],
         platform_id=4,
     )
 
@@ -938,7 +1376,9 @@ if __name__ == '__main__':
     print ""
 
     compile_build_plan(
-        build_sequence_one_block,
+        #build_sequence_six_block_pyramid,
+        build_sequence_wall_segment,
+        #build_sequence_three_block_column,
         p4,
         "/home/sam/Dev/ros-catkin-workspace/src/droplet_underwater_assembly/param/test_compiled_build_plan.txt"
     )
