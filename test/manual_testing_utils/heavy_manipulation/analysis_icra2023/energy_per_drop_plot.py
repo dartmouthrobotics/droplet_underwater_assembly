@@ -4,6 +4,10 @@ import copy
 import numpy as np
 import numpy.linalg as linalg
 import matplotlib.patches as patches
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 from matplotlib import pyplot
 
 import bag_files
@@ -186,7 +190,7 @@ def make_energy_timeline_plot(data):
         end_time = (batt_msg.header.stamp - first_time).to_sec()
 
     initial_phase = get_phase_name(data[0]['/droplet_underwater_assembly/build_phase'][0].current_action_type)
-    phase_start_times = get_phase_start_times(data, initial_phase)
+    phase_start_times = get_phase_start_times(data[0], initial_phase)
 
     fig, ax = pyplot.subplots()
 
@@ -223,6 +227,7 @@ def make_energy_timeline_plot(data):
 
     ax.plot(time_points, energy_readings, c='k')
     ax.legend()
+    pyplot.savefig("./energy_use_timeline_for_block_stack.pdf")
     pyplot.show()
 
 
@@ -306,7 +311,9 @@ def get_phase_timing_stats(data):
     print("    Average time to manipulate: {}s".format(avg(manip_totals)))
 
 
+vals = []
 def get_energy_stats_by_phase(bag_file_path):
+    global vals
     print("---Energy stats---")
     bag_file = rosbag.Bag(bag_file_path)
     topics = [
@@ -329,11 +336,17 @@ def get_energy_stats_by_phase(bag_file_path):
     manip_segmented_data = get_data_for_grasp_actions(bag_file_path, ['/mavros/battery', build_phase_topic])
     energy_by_phase = {}
 
-    for manip in manip_segmented_data:
+    for i, manip in enumerate(manip_segmented_data):
         phases = get_phase_start_times(manip, 'Grasping block')
         manip_end = manip['/droplet_underwater_assembly/build_phase'][-1].header.stamp
         manip_start = manip['/droplet_underwater_assembly/build_phase'][0].header.stamp
         manip_end_seconds = (manip_end - manip_start).to_sec()
+
+        amps_consumed_in_manip = get_amp_hours_consumed(manip['/mavros/battery'])
+        print(amps_consumed_in_manip)
+        percentage_of_batt = (amps_consumed_in_manip / 18.0)*100.0
+        vals.append(percentage_of_batt)
+        print("      Manip {}: {:.2f}%".format(i, percentage_of_batt))
 
         for i, (name, start_time) in enumerate(phases):
             batt_messages_for_phase = []
@@ -392,10 +405,14 @@ def get_position_errors_during_grasps():
 for f in all_files:
     print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     print f
-    r = get_data_for_grasp_actions(f, ['/mavros/battery', build_phase_topic])
-    get_phase_timing_stats(r)
+    #r = get_data_for_grasp_actions(f, ['/mavros/battery', build_phase_topic])
+    #get_phase_timing_stats(r)
     get_energy_stats_by_phase(f)
     print "............................"
+
+print("Avg percent consumed: {}".format(avg(vals)))
+#r = get_data_for_grasp_actions(all_files[0], ['/mavros/battery', build_phase_topic])
+#make_energy_timeline_plot(r)
 
 #make_energy_timeline_plot(r)
 #make_grasp_alignment_plot(r, 4)
