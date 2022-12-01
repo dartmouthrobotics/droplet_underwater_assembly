@@ -1,8 +1,6 @@
 <?xml version="1.0"?>
-
 <launch>
-    <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 1.25 /media/sam/storage/uw-assembly-experiments/07-13-cam-focusing/7-13-cam-calib_2021-07-28-14-35-00.bag"/>
-    <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/camera_array/cam0/image_raw raw out:=/image_raw"/>
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 1.00 /media/sam/storage/uw-assembly-experiments/11_17_2022_fisheye/2022-11-17-12-38-45.bag"/>
+    <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/camera_array/cam1/image_raw raw out:=/image_raw"/>
     <node pkg="camera_calibration" name="calibrator" output="screen" type="cameracalibrator.py" args="--size 8x6 --square 0.062 image:=/image_raw"/>
-
 </launch>
