@@ -301,6 +301,38 @@ class PIDTracker(object):
         return utils.construct_rc_message(motor_speeds)
 
 
+class StandardRCOverrideTracker(PIDTracker):
+    def __init__(self, **kwargs):
+        super(StandardRCOverrideTracker, self).__init__(
+            **kwargs
+        )
+
+    def convert_thrust_vector_to_rc_overrde(self, xyyaw_thrusts, zrp_thrusts):
+        pass
+
+    def get_next_rc_override(self):
+        xyyaw_thrusts = self.get_xyyaw_thrust_vector()
+        zrp_thrusts = self.get_zrp_thrust_vector()
+
+        thrust_vector = xyyaw_thrusts + zrp_thrusts
+
+        motor_intensities = self.convert_thrust_vector_to_motor_intensities(thrust_vector)
+        motor_speeds = self.convert_motor_intensities_to_pwms(motor_intensities)
+
+        max_motor_speed = 150.0
+
+        x_channel = 0
+        y_channel = 0
+        z_channel = 0
+        r_channel = 0
+        p_channel = 0
+        yaw_channel = 0
+
+        result_message = utils.construct_stop_rc_message()
+
+        return utils.construct_rc_message(motor_speeds)
+
+
 class OpenLoopTracker(PIDTracker):
     # we want to move to another tag, so what does that look like?
     def __init__(self, **kwargs):
@@ -352,12 +384,47 @@ class OpenLoopTracker(PIDTracker):
         # we want to maintain the roll, yaw correction since we get that every frame easily
         # lets try pulsing up and to the left
 
-class YawDepthHoldController(PIDTracker):
-    def __init__(self, **kwargs):
-        super()
 
-    def set_pressure(pressure_reading):
-        pass
+class DepthHoldClassicRCOverrideController(PIDTracker):
+    def __init__(self, **kwargs):
+        super(**kwargs)
+
+    def get_next_rc_override(self):
+        xyyaw_thrusts = self.get_xyyaw_thrust_vector()
+        x_thrust = xyyaw_thrusts[0]
+        y_thrust = xyyaw_thrusts[1]
+        yaw_thrust = xyyaw_thrusts[2]
+
+        # 5 lateral
+        # 3 yaw
+        # 4 forward
+
+        yaw_channel = 3
+        x_channel = 4
+        y_channel = 5
+
+        max_speed = 100.0
+
+        motor_speeds = [
+            1500.0,
+            1500.0,
+            1500.0,
+            1500.0,
+            1500.0,
+            1500.0,
+            1500.0,
+            1500.0,
+            1500.0,
+        ]
+
+        motor_speeds[yaw_channel] = motor_speeds[yaw_channel] + yaw_thrust * max_speed
+        motor_speeds[x_channel] = motor_speeds[x_channel] + x_thrust * max_speed
+        motor_speeds[y_channel] = motor_speeds[y_channel] + y_thrust * max_speed
+
+        for speed in motor_speeds:
+            assert((abs(speed) - 1500) <= 200)
+
+        return utils.construct_rc_message(motor_speeds)
 
 
 class BinaryPController(PIDTracker):

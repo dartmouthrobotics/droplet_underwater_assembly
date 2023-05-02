@@ -60,9 +60,10 @@ def get_data_for_grasp_actions(bag_file_path, topics):
     return result
 
 
-def get_amp_hours_consumed(battery_messages):
+# now watt hours
+def get_watt_hours_consumed(battery_messages):
     y_vals = [
-        -m.current for m in battery_messages
+        -m.current*m.voltage for m in battery_messages
     ]
 
     first_time = battery_messages[0].header.stamp
@@ -185,7 +186,7 @@ def make_energy_timeline_plot(data):
         if first_time is None:
             first_time = batt_msg.header.stamp
 
-        energy_readings.append(-batt_msg.current)
+        energy_readings.append(-batt_msg.current*batt_msg.voltage)
         time_points.append((batt_msg.header.stamp - first_time).to_sec())
         end_time = (batt_msg.header.stamp - first_time).to_sec()
 
@@ -202,15 +203,15 @@ def make_energy_timeline_plot(data):
         t = (m.header.stamp - first_time).to_sec()
 
         if t1 <= t <= t2:
-            current_ms.append(-m.current)
+            current_ms.append(-m.current*m.voltage)
 
-    print("Average current for transit: {}".format(avg(current_ms)))
+    print("Average watts for transit: {}".format(avg(current_ms)))
 
 
     last_phase = 0.0
     for i, (phase, time) in enumerate(phase_start_times):
         ax.axvline(x=time, c='r', linestyle='--')
-        h = 3.0
+        h = 120.0
         et = 0.0
         if i < len(phase_start_times)-1:
             et = phase_start_times[i+1][1]
@@ -222,7 +223,7 @@ def make_energy_timeline_plot(data):
         last_phase = time
 
     ax.set_xlabel('Time (seconds)')
-    ax.set_ylabel('Current draw (amps)')
+    ax.set_ylabel('Watts')
     #ax.set_title("Energy use while stacking a block")
 
     ax.plot(time_points, energy_readings, c='k')
@@ -311,6 +312,7 @@ def get_phase_timing_stats(data):
     print("    Average time to manipulate: {}s".format(avg(manip_totals)))
 
 
+battery_total = 230.0
 vals = []
 def get_energy_stats_by_phase(bag_file_path):
     global vals
@@ -328,9 +330,9 @@ def get_energy_stats_by_phase(bag_file_path):
         if topic == '/mavros/battery':
             all_batt_messages.append(message)
 
-    all_energy = get_amp_hours_consumed(all_batt_messages)
-    print "    Total energy: {} Ah".format(all_energy)
-    print "    Batt percent: {}%".format((all_energy/18.0)*100.0)
+    all_energy = get_watt_hours_consumed(all_batt_messages)
+    print "    Total energy: {} Wh".format(all_energy)
+    print "    Batt percent: {}%".format((all_energy/battery_total)*100.0)
     print "    Start voltage: {}, end voltage: {}".format(all_batt_messages[0].voltage, all_batt_messages[-1].voltage)
 
     manip_segmented_data = get_data_for_grasp_actions(bag_file_path, ['/mavros/battery', build_phase_topic])
@@ -342,11 +344,11 @@ def get_energy_stats_by_phase(bag_file_path):
         manip_start = manip['/droplet_underwater_assembly/build_phase'][0].header.stamp
         manip_end_seconds = (manip_end - manip_start).to_sec()
 
-        amps_consumed_in_manip = get_amp_hours_consumed(manip['/mavros/battery'])
-        print(amps_consumed_in_manip)
-        percentage_of_batt = (amps_consumed_in_manip / 18.0)*100.0
+        amps_consumed_in_manip = get_watt_hours_consumed(manip['/mavros/battery'])
+        #print(amps_consumed_in_manip)
+        percentage_of_batt = (amps_consumed_in_manip / battery_total)*100.0
         vals.append(percentage_of_batt)
-        print("      Manip {}: {:.2f}%".format(i, percentage_of_batt))
+        print("      Manip {}: consumed {}Wh ({:.2f}%)".format(i, amps_consumed_in_manip, percentage_of_batt))
 
         for i, (name, start_time) in enumerate(phases):
             batt_messages_for_phase = []
@@ -363,7 +365,7 @@ def get_energy_stats_by_phase(bag_file_path):
             if name not in energy_by_phase:
                 energy_by_phase[name] = 0.0
 
-            energy_by_phase[name] = energy_by_phase[name] + get_amp_hours_consumed(batt_messages_for_phase)
+            energy_by_phase[name] = energy_by_phase[name] + get_watt_hours_consumed(batt_messages_for_phase)
 
     total_in_manips = 0.0
     for phase in sorted(energy_by_phase.keys()):
@@ -402,18 +404,18 @@ def get_position_errors_during_grasps():
 #r = get_data_for_grasp_actions(selected_file, ['/mavros/battery', build_phase_topic])
 #print(r[-1]['/droplet_underwater_assembly/build_phase'][-1])
 
-for f in all_files:
-    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    print f
-    #r = get_data_for_grasp_actions(f, ['/mavros/battery', build_phase_topic])
-    #get_phase_timing_stats(r)
-    get_energy_stats_by_phase(f)
-    print "............................"
-
-print("Avg percent consumed: {}".format(avg(vals)))
-#r = get_data_for_grasp_actions(all_files[0], ['/mavros/battery', build_phase_topic])
-#make_energy_timeline_plot(r)
-
+#for f in all_files:
+#    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+#    print f
+#    #r = get_data_for_grasp_actions(f, ['/mavros/battery', build_phase_topic])
+#    #get_phase_timing_stats(r)
+#    get_energy_stats_by_phase(f)
+#    print "............................"
+#
+#print("Avg percent consumed: {}".format(avg(vals)))
+r = get_data_for_grasp_actions(all_files[0], ['/mavros/battery', build_phase_topic])
+make_energy_timeline_plot(r)
+#
 #make_energy_timeline_plot(r)
 #make_grasp_alignment_plot(r, 4)
 

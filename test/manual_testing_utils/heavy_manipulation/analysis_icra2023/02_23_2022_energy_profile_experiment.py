@@ -11,10 +11,10 @@ pyplot.rcParams.update({
 })
 
 # for pos
-pos_bag_file_path = "/media/sam/storage/uw-assembly-experiments/heavy_manipulation/buoyancy-calibration-experiment-feb-28-2022/calib_pos_buoyancy_2021-07-28-15-13-56.bag"
+pos_bag_file_path = "/home/sam/uw-assembly-experiments/heavy_manipulation/buoyancy-calibration-experiment-feb-28-2022/calib_pos_buoyancy_2021-07-28-15-13-56.bag"
 
 # for neg
-neg_bag_file_path = "/media/sam/storage/uw-assembly-experiments/heavy_manipulation/negative_ballast_calibration_05_04/ballast_calib_neg_changes_2021-07-28-15-20-14.bag"
+neg_bag_file_path = "/home/sam/uw-assembly-experiments/heavy_manipulation/negative_ballast_calibration_05_04/ballast_calib_neg_changes_2021-07-28-15-20-14.bag"
 
 
 neg_bag_file = rosbag.Bag(neg_bag_file_path)
@@ -45,7 +45,7 @@ def plot_ballast_data(positive, ax, bag_file):
             if action_str is not None:
                 if action_str == hold_str: # 30.0 for neg
                     energy_usages.append(
-                        (-1 * message.current, action_seq)
+                        (-1 * message.current * message.voltage, action_seq)
                     )
 
         else:
@@ -67,6 +67,7 @@ def plot_ballast_data(positive, ax, bag_file):
         ballast_vals.reverse()
 
     p = numpy.polyfit(ballast_vals, avgs, 2)
+    print("Polynomial fit found: {}. is positive {}".format(p, positive))
 
     ax.plot(ballast_vals, [(p[0] * b ** 2 + p[1] * b + p[2]) for b in ballast_vals], label="Approximated $f(b)$")
     ax.plot(ballast_vals, [x for x in avgs], label="Measured")
@@ -76,7 +77,7 @@ def plot_ballast_data(positive, ax, bag_file):
         ax.legend()
     else:
         ax.set_title("Without block")
-        ax.set_ylabel("Amps")
+        ax.set_ylabel("Watts")
 
     ax.set_xlabel("ballast level: $b$")
 
@@ -86,5 +87,6 @@ fig.set_size_inches(7.5, 4.5)
 plot_ballast_data(False, ax1, neg_bag_file)
 plot_ballast_data(True, ax2, pos_bag_file)
 print("Size", fig.get_size_inches())
+fig.savefig('energy_use_watts_with_without_block.pdf')
 
 pyplot.show()
