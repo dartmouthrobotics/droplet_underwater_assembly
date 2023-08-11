@@ -11,7 +11,6 @@ import cv_bridge
 
 import splinter
 
-
 class BreadcrumbLocalizer(object):
     def __init__(self):
         self.eigenvalue_spline = splinter.Spline.load(self.spline_file_path)

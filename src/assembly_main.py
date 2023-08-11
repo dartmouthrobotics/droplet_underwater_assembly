@@ -31,6 +31,14 @@ import stag_ros.srv
 
 import droplet_underwater_assembly.msg
 
+# what can we do to refactor this
+# what is needed for the breadcrumbs project? We need the spline, we need opencv, we need the construction map.
+# how can we separate out the controller into a node? There are a variety of gains used for the controller. There are a variety of controller used throughout the construction process.
+# The controller needs a goal. It needs a set of gains. It needs a stream of position information.
+# service to change goal
+# topic to absorb position information
+# service to change gains / strategy
+
 # should bailing release be a new type of action or just a couple of options on the release action
 # bailing release is
 #   1. turn thrusters on pushing down. 
@@ -318,7 +326,7 @@ def get_robot_pose_xyzrpy():
 
     robot_pose = utils.get_robot_pose_from_marker(LATEST_MARKER_MESSAGE)
     robot_pose_xyzrpy = utils.to_xyzrpy(*robot_pose)
-    
+
     return robot_pose_xyzrpy
 
 
