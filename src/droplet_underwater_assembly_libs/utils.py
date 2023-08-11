@@ -11,7 +11,8 @@ import matplotlib
 import tf
 import tf.transformations
 import geometry_msgs.msg
-import config
+
+from droplet_underwater_assembly_libs import config
 
 
 ARMING_SERVICE_PROXY = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
@@ -260,7 +261,7 @@ def pose_stamped_from_xyzrpy(xyzrpy, frame_id, seq, stamp):
     pose.position.y = xyzrpy[1]
     pose.position.z = xyzrpy[2]
 
-    orientation = tf.transformations.quaternion_from_euler(xyzrpy[3], xyzrpy[4], xyzrpy[5])
+    orientation = tf.transformations.quaternion_from_euler(xyzrpy[3], xyzrpy[4], xyzrpy[5], 'sxyz')
 
     pose.orientation.x = orientation[0]
     pose.orientation.y = orientation[1]

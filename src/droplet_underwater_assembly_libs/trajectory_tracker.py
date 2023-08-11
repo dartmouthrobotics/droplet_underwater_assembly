@@ -1,7 +1,9 @@
+import numpy as np
 import collections
-import utils
 import rospy
 import tf
+
+from droplet_underwater_assembly_libs import utils
 
 NUMBER_MOTORS = 8
 
@@ -201,6 +203,7 @@ class PIDTracker(object):
                 self.error_integral[dimension] = hint_thrust / self.z_i
                 self.buoyancy_override_hint = None
 
+
     def clear_error_integrals(self, prev_buoyancy_input=None):
         self.last_position_update_time = None
         self.error_integral = [0.0] * len(self.error_integral)
@@ -230,9 +233,16 @@ class PIDTracker(object):
     def get_xyyaw_thrust_vector(self):
         error = self.get_error()
 
+        error_rotation_mat = tf.transformations.euler_matrix(0, 0, -self.current_position[5], 'sxyz')[:3, :3]
+        error_translation = np.array(error[:3])
+        rotated_error = error_rotation_mat.dot(error_translation)
+        
+        rospy.logwarn("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+        print("Error trans {}, rot err {}".format(error_translation, rotated_error))
+
         return [
-            error[0] * self.x_p + self.current_velocity[0] * self.x_d + self.error_integral[0] * self.x_i,
-            error[1] * self.y_p + self.current_velocity[1] * self.y_d + self.error_integral[1] * self.y_i,
+            rotated_error[0] * self.x_p + self.current_velocity[0] * self.x_d + self.error_integral[0] * self.x_i,
+            rotated_error[1] * self.y_p + self.current_velocity[1] * self.y_d + self.error_integral[1] * self.y_i,
             error[5] * self.yaw_p + self.current_velocity[5] * self.yaw_d + self.error_integral[5] * self.yaw_i
         ]
 
