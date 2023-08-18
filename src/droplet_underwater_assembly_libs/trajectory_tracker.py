@@ -184,8 +184,22 @@ class PIDTracker(object):
         return offset_motor_speeds
 
 
+    def get_yaw_rotation_matrix(self, current_position):
+        error_rotation_mat = tf.transformations.euler_matrix(0, 0, -current_position[5], 'sxyz')[:3, :3]
+        return error_rotation_mat
+
+
     def update_error_integrals(self, next_position):
         next_error = utils.get_error(next_position, self.goal_position)
+
+        next_error_translation = np.array(next_error[:3])
+        error_rotation_mat = self.get_yaw_rotation_matrix(next_position)
+        rotated_translation_error = error_rotation_mat.dot(next_error_translation)
+
+        next_error[0] = rotated_translation_error[0]
+        next_error[1] = rotated_translation_error[1]
+        next_error[2] = rotated_translation_error[2]
+
         seconds_since_last_update = (rospy.Time.now() - self.last_position_update_time).to_sec()
         roll_error, pitch_error = self.get_angle_error_from_imu_reading()
 
@@ -233,12 +247,9 @@ class PIDTracker(object):
     def get_xyyaw_thrust_vector(self):
         error = self.get_error()
 
-        error_rotation_mat = tf.transformations.euler_matrix(0, 0, -self.current_position[5], 'sxyz')[:3, :3]
+        error_rotation_mat = self.get_yaw_rotation_matrix(self.current_position)
         error_translation = np.array(error[:3])
         rotated_error = error_rotation_mat.dot(error_translation)
-        
-        rospy.logwarn("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-        print("Error trans {}, rot err {}".format(error_translation, rotated_error))
 
         return [
             rotated_error[0] * self.x_p + self.current_velocity[0] * self.x_d + self.error_integral[0] * self.x_i,
